@@ -289,13 +289,128 @@ def write_methodology_note() -> None:
         "- Sizing: each instrument is scaled to 40% annualized volatility using full-sample realized volatility, then averaged across active instruments.",
         "- Timing: signals are computed using information through month t and traded in month t+1.",
         "- Static benchmark: same volatility-scaled instruments, but always long and equally averaged.",
+        "- Full-sample volatility contains future information; this is a retrospective classroom baseline, not an out-of-sample backtest.",
+        "- No transaction costs, slippage, financing costs, or cash interest are included.",
         "",
         "## Alpha illustration",
         "- Portfolio alpha is measured as monthly TSMOM return minus monthly Static benchmark return.",
         "- Asset-class and instrument tables compare TSMOM and Static contribution streams.",
-        "- Low TSMOM-Static correlation and positive alpha contribution indicate that timing adds value beyond passive long exposure.",
+        "- Alpha here is a return difference, not a factor-regression intercept. Low correlation alone does not establish added value.",
+        "- TSMOM requires 12 valid months while Static starts earlier, so their active universes can differ.",
     ]
     (OUT_DIR / "strategy_methodology.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def portfolio_correlations(tsmom: dict, static: dict) -> pd.DataFrame:
+    paired = pd.DataFrame({"tsmom": tsmom["returns"], "static": static["returns"]})
+    active = tsmom["execution_weights"].abs().sum(axis=1) > 0
+    rows = []
+    for label, sample in [("full_sample", paired), ("tsmom_active_months", paired.loc[active])]:
+        rows.append({"sample": label, "start": sample.index.min().date(),
+                     "end": sample.index.max().date(), "months": len(sample),
+                     "correlation_tsmom_static": sample["tsmom"].corr(sample["static"])})
+    return pd.DataFrame(rows)
+
+
+def write_group_report(summary: pd.DataFrame, correlations: pd.DataFrame,
+                       asset_class_corr: pd.DataFrame) -> None:
+    report_dir = ROOT / "reports"
+    report_dir.mkdir(exist_ok=True)
+    rows = []
+    for label, row in zip(["12-month TSMOM", "Always-long static", "Return difference"],
+                          summary.to_dict("records")):
+        rows.append(f"| {label} | {row['annual_return']:.2%} | {row['annual_volatility']:.2%} | "
+                    f"{row['sharpe_0rf']:.3f} | {row['max_drawdown']:.2%} |")
+    corr_text = "\n".join(
+        f"- {row['sample']}: correlation **{row['correlation_tsmom_static']:.3f}**, "
+        f"{row['months']} months ({row['start']} to {row['end']})."
+        for row in correlations.to_dict("records"))
+    class_text = "\n".join(
+        f"| {row['asset_class']} | {row['correlation_tsmom_static']:.3f} | "
+        f"{row['alpha_annualized_contribution']:.2%} |"
+        for row in asset_class_corr.to_dict("records"))
+    text = f"""# ORIE 5260 — Group Update, October 6, 2026
+
+## This week's progress
+Implemented and documented a 12-month time-series momentum baseline, compared it
+with an always-long static benchmark, calculated portfolio, asset-class and
+instrument correlations, and generated performance and alpha illustrations.
+No earlier baseline specification is available in the repository, so a change
+relative to a previous version or exact agreement with the lecture cannot be established.
+
+## Data
+- `MonthlyReturns.csv`: 58 futures series, 552 monthly observations, January 1969–December 2014.
+- Universe: 26 commodity, 14 equity, 10 fixed-income and 8 FX series.
+- `FuturesUnderlyingData/`: 62 daily OHLC/volume/open-interest files. Not used by this backtest.
+- `Lecture3_livedata.xlsx`: 180 monthly observations, 2000–2014, for SG Trend, GSCI, factors and RF. Not used by this backtest.
+- Histories start at different dates; the first monthly row has no valid returns.
+
+## Baseline and benchmark
+At month t, the signal is the sign of compounded returns over the latest 12
+valid consecutive months. Positive signals are long, negative signals are short,
+and zero signals have zero exposure. Instruments without sufficient history are excluded.
+Each signal is multiplied by 0.40 / full-sample annualized instrument volatility
+and divided by the number of instruments with valid signals. Positions formed
+at t earn returns at t+1. Rebalancing is monthly.
+The static benchmark uses the same volatility scaling, always holds long positions,
+and averages across instruments with available returns. The 40% parameter is
+instrument-level scaling; it does not imply 40% portfolio volatility.
+
+## Performance
+Full sample: January 1969–December 2014, including initial zero-exposure months.
+
+| Strategy | Annual return | Annual volatility | Return / volatility | Max drawdown |
+|---|---:|---:|---:|---:|
+{chr(10).join(rows)}
+
+Strategy annual returns are compounded annual growth rates. The return-difference
+row annualizes the monthly mean arithmetically, so it is not the difference of
+the two strategy CAGRs. The code's `sharpe_0rf` uses CAGR / annual volatility
+for the strategies, rather than the conventional annualized mean-excess-return Sharpe.
+
+## Correlations
+{corr_text}
+The active-month sample excludes TSMOM's initial zero-exposure months; it does
+not force the two strategies to use identical instrument universes.
+
+| Asset class | TSMOM–static contribution correlation | Annualized return-difference contribution |
+|---|---:|---:|
+{class_text}
+
+## Alpha illustration and interpretation
+Alpha is defined here as TSMOM monthly return minus static monthly return.
+It is a descriptive return difference, not a regression alpha or evidence of
+statistical significance. The asset-class contributions sum to the portfolio's
+annualized mean return difference. Positive contributions show where TSMOM
+outperformed the static exposure in this sample; low correlation measures different
+return behavior, and alone does not imply superior performance.
+
+![Growth of one dollar](../outputs/strategy/cumulative_tsmom_vs_static.png)
+
+![Cumulative arithmetic return difference](../outputs/strategy/cumulative_alpha_tsmom_minus_static.png)
+
+The alpha curve sums monthly differences; it is not compounded investment wealth.
+
+![Alpha contribution by asset class](../outputs/strategy/asset_class_alpha_contribution.png)
+
+## Limitations and next steps
+- Full-sample volatility includes future observations, creating look-ahead bias. Retain this result as the classroom baseline and compare a rolling, historically available volatility estimate next.
+- The benchmarks have different availability rules: TSMOM requires 12 months of history, Static does not. Add a comparison using the same eligible universe.
+- Missing realized returns are filled with zero; examine delisted or discontinued series before interpreting results.
+- Transaction costs, slippage, financing and cash interest are omitted.
+- Confirm the lecture's intended baseline and alpha definition. If regression alpha is required, use aligned monthly benchmark/factor data and report inference separately.
+- Verify continuous-futures construction and price adjustments before interpreting the source returns economically.
+
+## Reproduce
+From the project directory, run `python3 strategy_backtest.py` with numpy,
+pandas and matplotlib installed. Tables, figures and methodology are written
+to `outputs/strategy/`; this dated report is regenerated from the results.
+
+## Future weekly updates
+Create a new dated report for each week using [the weekly template](weekly_update_template.md).
+Keep previous dated reports and describe each change, its evidence and remaining limitations.
+"""
+    (report_dir / "group_update_2026-10-06.md").write_text(text, encoding="utf-8")
 
 
 def main() -> None:
@@ -318,10 +433,14 @@ def main() -> None:
     instrument_corr = correlation_by_instrument(tsmom, static, asset_map)
     instrument_corr.to_csv(OUT_DIR / "correlation_alpha_by_instrument.csv", index=False, float_format="%.10g")
 
+    portfolio_corr = portfolio_correlations(tsmom, static)
+    portfolio_corr.to_csv(OUT_DIR / "correlation_alpha_by_portfolio.csv", index=False, float_format="%.10g")
+
     plot_cumulative_returns(results)
     plot_cumulative_alpha(tsmom, static)
     plot_asset_class_alpha(asset_class_corr)
     write_methodology_note()
+    write_group_report(summary, portfolio_corr, asset_class_corr)
 
     print(f"Wrote strategy outputs to {OUT_DIR}")
     if plt is None:
