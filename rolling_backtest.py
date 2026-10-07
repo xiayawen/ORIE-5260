@@ -58,6 +58,7 @@ def regression(y, factors, name, specification):
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    (ROOT / 'reports').mkdir(parents=True, exist_ok=True)
     r = read_returns()
     tw, sw, eligible = matched_weights(r)
     fw, fs, _ = matched_weights(r, rolling=False)
