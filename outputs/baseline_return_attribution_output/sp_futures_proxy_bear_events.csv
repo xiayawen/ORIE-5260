@@ -1,0 +1,3 @@
+peak_date,trough_date,recovery_date,maximum_drawdown,months_peak_to_trough,months_peak_to_recovery
+1987-08-31,1987-11-30,1991-05-31,-0.3046356306918755,3,45
+2000-03-31,2009-02-27,2013-07-31,-0.58617763963354,107,160

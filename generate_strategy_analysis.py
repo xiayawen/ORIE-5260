@@ -1,4 +1,4 @@
-"""Generate asset-class statistics and an SG Trend comparison.
+"""Generate asset-class statistics, SG Trend comparisons, and factor analysis.
 
 The script uses the adjusted TSMOM baseline in ``strategy_backtest_adj.py``.
 It loads saved adjusted-strategy returns from
@@ -34,6 +34,9 @@ from strategy_backtest_adj import (
 
 TRADING_MONTHS = 12
 ROLLING_CORRELATION_MONTHS = 36
+ROLLING_FACTOR_MONTHS = 60
+ROLLING_BENCHMARK_MONTHS = 36
+FACTOR_COLUMNS = ("Mkt-RF", "SMB", "HML", "Mom", "RMW", "CMA")
 ROOT = Path(__file__).resolve().parent
 OUT_DIR = ROOT / "outputs" / "strategy_analysis_output"
 SAVED_STRATEGY_RETURNS = (
@@ -238,7 +241,8 @@ def load_lecture_data() -> pd.DataFrame:
     lecture = pd.read_excel(LECTURE_DATA)
     lecture["Date"] = pd.to_datetime(lecture["Date"], errors="coerce")
     lecture = lecture.dropna(subset=["Date"]).set_index("Date").sort_index()
-    return lecture[["SG Trend", "RF"]].apply(pd.to_numeric, errors="coerce")
+    columns = ["SG Trend", *FACTOR_COLUMNS, "RF"]
+    return lecture[columns].apply(pd.to_numeric, errors="coerce")
 
 
 def align_with_sg_trend(strategy_returns: pd.Series) -> pd.DataFrame:
@@ -326,6 +330,167 @@ def sg_trend_regressions(aligned: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def single_factor_regressions(
+    aligned: pd.DataFrame, return_column: str, strategy_label: str
+) -> pd.DataFrame:
+    """Run one excess-return regression per factor with HAC(3) inference."""
+    dependent = aligned[return_column] - aligned["RF"]
+    rows = []
+    for factor in FACTOR_COLUMNS:
+        data = pd.concat(
+            [dependent.rename("excess_return"), aligned[factor].rename("factor")],
+            axis=1,
+        ).dropna()
+        fit = sm.OLS(
+            data["excess_return"], sm.add_constant(data[["factor"]])
+        ).fit(cov_type="HAC", cov_kwds={"maxlags": 3})
+        alpha_interval = fit.conf_int().loc["const"] * TRADING_MONTHS
+        rows.append(
+            {
+                "strategy": strategy_label,
+                "factor": factor,
+                "start": str(data.index.min()),
+                "end": str(data.index.max()),
+                "months": len(data),
+                "correlation": data["excess_return"].corr(data["factor"]),
+                "beta": fit.params["factor"],
+                "beta_hac_t": fit.tvalues["factor"],
+                "beta_pvalue": fit.pvalues["factor"],
+                "alpha_annual_arithmetic": fit.params["const"] * TRADING_MONTHS,
+                "alpha_hac_t": fit.tvalues["const"],
+                "alpha_pvalue": fit.pvalues["const"],
+                "alpha_ci_lower": alpha_interval.iloc[0],
+                "alpha_ci_upper": alpha_interval.iloc[1],
+                "r_squared": fit.rsquared,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def joint_factor_regression(
+    aligned: pd.DataFrame, return_column: str, strategy_label: str
+) -> pd.DataFrame:
+    """Run the joint six-factor excess-return model with HAC(3) inference."""
+    dependent = (aligned[return_column] - aligned["RF"]).rename("excess_return")
+    data = pd.concat([dependent, aligned[list(FACTOR_COLUMNS)]], axis=1).dropna()
+    fit = sm.OLS(
+        data["excess_return"], sm.add_constant(data[list(FACTOR_COLUMNS)])
+    ).fit(cov_type="HAC", cov_kwds={"maxlags": 3})
+    factor_component = data[list(FACTOR_COLUMNS)].dot(
+        fit.params[list(FACTOR_COLUMNS)]
+    )
+    residual = fit.resid
+    alpha_interval = fit.conf_int().loc["const"] * TRADING_MONTHS
+    row = {
+        "strategy": strategy_label,
+        "start": str(data.index.min()),
+        "end": str(data.index.max()),
+        "months": len(data),
+        "alpha_annual_arithmetic": fit.params["const"] * TRADING_MONTHS,
+        "alpha_hac_t": fit.tvalues["const"],
+        "alpha_pvalue": fit.pvalues["const"],
+        "alpha_ci_lower": alpha_interval.iloc[0],
+        "alpha_ci_upper": alpha_interval.iloc[1],
+        "systematic_annual_volatility": factor_component.std()
+        * np.sqrt(TRADING_MONTHS),
+        "residual_annual_volatility": residual.std() * np.sqrt(TRADING_MONTHS),
+        "r_squared": fit.rsquared,
+    }
+    for factor in FACTOR_COLUMNS:
+        safe_name = factor.lower().replace("-", "_")
+        row[f"beta_{safe_name}"] = fit.params[factor]
+        row[f"beta_{safe_name}_hac_t"] = fit.tvalues[factor]
+        row[f"beta_{safe_name}_pvalue"] = fit.pvalues[factor]
+    return pd.DataFrame([row])
+
+
+def factor_comparison_table(single_factor: pd.DataFrame) -> pd.DataFrame:
+    """Create a presentation table similar to the course factor example."""
+    metric_labels = {
+        "correlation": "Correlation",
+        "beta": "Beta",
+        "alpha_annual_arithmetic": "Annualized alpha",
+        "alpha_hac_t": "Alpha HAC t-stat",
+        "r_squared": "R-squared",
+    }
+    rows = []
+    for strategy in single_factor["strategy"].unique():
+        subset = single_factor[single_factor["strategy"] == strategy].set_index(
+            "factor"
+        )
+        for metric, label in metric_labels.items():
+            row = {"strategy": strategy, "metric": label}
+            row.update(subset[metric].reindex(FACTOR_COLUMNS).to_dict())
+            rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def rolling_joint_factor_betas(aligned: pd.DataFrame) -> pd.DataFrame:
+    """Estimate trailing 60-month joint-model betas for the baseline and SG Trend."""
+    rows = []
+    factor_data = aligned[list(FACTOR_COLUMNS)]
+    for return_column, strategy_label in (("TSMOM", "Baseline"), ("SG Trend", "SG Trend")):
+        dependent = aligned[return_column] - aligned["RF"]
+        combined = pd.concat(
+            [dependent.rename("excess_return"), factor_data], axis=1
+        ).dropna()
+        for end_position in range(ROLLING_FACTOR_MONTHS - 1, len(combined)):
+            window = combined.iloc[
+                end_position - ROLLING_FACTOR_MONTHS + 1 : end_position + 1
+            ]
+            design = sm.add_constant(window[list(FACTOR_COLUMNS)])
+            fit = sm.OLS(window["excess_return"], design).fit()
+            row = {
+                "Date": str(window.index[-1]),
+                "strategy": strategy_label,
+                "window_months": ROLLING_FACTOR_MONTHS,
+                "alpha_annual_arithmetic": fit.params["const"] * TRADING_MONTHS,
+                "r_squared": fit.rsquared,
+            }
+            for factor in FACTOR_COLUMNS:
+                row[f"beta_{factor.lower().replace('-', '_')}"] = fit.params[factor]
+            rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def plot_factor_betas(single_factor: pd.DataFrame) -> None:
+    """Compare single-factor betas for the baseline and SG Trend."""
+    pivot = single_factor.pivot(index="factor", columns="strategy", values="beta")
+    pivot = pivot.reindex(FACTOR_COLUMNS)
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+    pivot.plot(kind="bar", ax=ax, color=["#1f4e79", "#e07b00"])
+    ax.axhline(0.0, color="#666666", linewidth=0.8)
+    ax.set_title("Single-factor betas: adjusted baseline and SG Trend")
+    ax.set_xlabel("Factor")
+    ax.set_ylabel("Beta")
+    ax.tick_params(axis="x", rotation=0)
+    ax.grid(axis="y", alpha=0.25)
+    ax.legend(frameon=False)
+    fig.tight_layout()
+    fig.savefig(OUT_DIR / "factor_beta_comparison.png", dpi=180, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_factor_alphas(single_factor: pd.DataFrame) -> None:
+    """Compare annualized intercepts from the single-factor regressions."""
+    pivot = single_factor.pivot(
+        index="factor", columns="strategy", values="alpha_annual_arithmetic"
+    ).reindex(FACTOR_COLUMNS)
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+    pivot.plot(kind="bar", ax=ax, color=["#1f4e79", "#e07b00"])
+    ax.axhline(0.0, color="#666666", linewidth=0.8)
+    ax.set_title("Annualized alpha from separate single-factor regressions")
+    ax.set_xlabel("Factor")
+    ax.set_ylabel("Annualized arithmetic alpha")
+    ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0))
+    ax.tick_params(axis="x", rotation=0)
+    ax.grid(axis="y", alpha=0.25)
+    ax.legend(frameon=False)
+    fig.tight_layout()
+    fig.savefig(OUT_DIR / "factor_alpha_comparison.png", dpi=180, bbox_inches="tight")
+    plt.close(fig)
+
+
 def plot_cumulative_comparison(aligned: pd.DataFrame) -> None:
     dates = aligned.index.to_timestamp("M")
     wealth = (1.0 + aligned[["TSMOM", "SG Trend"]]).cumprod()
@@ -362,6 +527,147 @@ def plot_rolling_correlation(aligned: pd.DataFrame) -> None:
     plt.close(fig)
 
 
+def benchmark_pair_outputs(
+    baseline: pd.Series, benchmark: pd.Series, benchmark_name: str
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Return raw/vol-matched summaries, monthly series, and rolling raw statistics."""
+    pair = pd.concat(
+        [baseline.rename("Baseline"), benchmark.rename(benchmark_name)], axis=1
+    ).dropna()
+    target_vol = pair["Baseline"].std() * np.sqrt(TRADING_MONTHS)
+    benchmark_vol = pair[benchmark_name].std() * np.sqrt(TRADING_MONTHS)
+    scale = target_vol / benchmark_vol if benchmark_vol > 0 else np.nan
+    matched = pair.copy()
+    matched[benchmark_name] = matched[benchmark_name] * scale
+
+    rows = []
+    for presentation, frame, scales in (
+        ("raw", pair, {"Baseline": 1.0, benchmark_name: 1.0}),
+        (
+            "volatility_matched_to_baseline",
+            matched,
+            {"Baseline": 1.0, benchmark_name: scale},
+        ),
+    ):
+        for series_name in frame:
+            row = {
+                "benchmark_comparison": benchmark_name,
+                "presentation": presentation,
+                "series": series_name,
+                "scale_multiplier": scales[series_name],
+                "start": str(frame.index.min()),
+                "end": str(frame.index.max()),
+                "months": len(frame),
+            }
+            row.update(annualized_statistics(frame[series_name]))
+            rows.append(row)
+
+    monthly = pd.concat(
+        {
+            f"{benchmark_name}_raw": pair,
+            f"{benchmark_name}_volatility_matched": matched,
+        },
+        axis=1,
+    )
+
+    rolling_rows = []
+    for series_name in pair:
+        series = pair[series_name]
+        rolling_mean = series.rolling(ROLLING_BENCHMARK_MONTHS).mean() * TRADING_MONTHS
+        rolling_vol = series.rolling(ROLLING_BENCHMARK_MONTHS).std() * np.sqrt(
+            TRADING_MONTHS
+        )
+        rolling_sharpe = rolling_mean / rolling_vol
+        rolling_rows.append(
+            pd.DataFrame(
+                {
+                    "benchmark_comparison": benchmark_name,
+                    "series": series_name,
+                    "rolling_annualized_return": rolling_mean,
+                    "rolling_annualized_volatility": rolling_vol,
+                    "rolling_sharpe_0rf": rolling_sharpe,
+                }
+            )
+        )
+    rolling = pd.concat(rolling_rows).reset_index().rename(columns={"index": "Date"})
+    return pd.DataFrame(rows), monthly, rolling
+
+
+def benchmark_analysis(
+    strategy_returns: pd.DataFrame, aligned: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Compare the baseline with Static and SG Trend in raw and matched form."""
+    static_summary, static_monthly, static_rolling = benchmark_pair_outputs(
+        strategy_returns[TSMOM_NAME], strategy_returns[STATIC_NAME], "Static benchmark"
+    )
+    sg_summary, sg_monthly, sg_rolling = benchmark_pair_outputs(
+        aligned["TSMOM"], aligned["SG Trend"], "SG Trend"
+    )
+    return (
+        pd.concat([static_summary, sg_summary], ignore_index=True),
+        pd.concat([static_monthly, sg_monthly], axis=1),
+        pd.concat([static_rolling, sg_rolling], ignore_index=True),
+    )
+
+
+def plot_benchmark_raw_and_matched(monthly: pd.DataFrame) -> None:
+    """Plot cumulative raw and volatility-matched benchmark comparisons."""
+    groups = ["Static benchmark", "SG Trend"]
+    fig, axes = plt.subplots(2, 2, figsize=(14, 9))
+    for row, benchmark in enumerate(groups):
+        for column, presentation in enumerate(("raw", "volatility_matched")):
+            frame = monthly[f"{benchmark}_{presentation}"].dropna()
+            wealth = (1.0 + frame).cumprod()
+            wealth.plot(ax=axes[row, column], logy=True)
+            axes[row, column].set_title(
+                f"{benchmark}: {'raw returns' if presentation == 'raw' else 'benchmark matched to baseline volatility'}"
+            )
+            axes[row, column].set_ylabel("Growth of 1 (log scale)")
+            axes[row, column].grid(alpha=0.25)
+            axes[row, column].legend(frameon=False)
+    fig.tight_layout()
+    fig.savefig(OUT_DIR / "benchmark_raw_vs_volatility_matched.png", dpi=180)
+    plt.close(fig)
+
+
+def plot_benchmark_rolling_statistics(rolling: pd.DataFrame) -> None:
+    metrics = [
+        ("rolling_annualized_return", "Rolling annualized return"),
+        ("rolling_annualized_volatility", "Rolling annualized volatility"),
+        ("rolling_sharpe_0rf", "Rolling Sharpe ratio"),
+    ]
+    fig, axes = plt.subplots(2, 3, figsize=(16, 9), sharex=False)
+    for row, benchmark in enumerate(("Static benchmark", "SG Trend")):
+        subset = rolling[rolling["benchmark_comparison"] == benchmark]
+        for column, (metric, title) in enumerate(metrics):
+            pivot = subset.pivot(index="Date", columns="series", values=metric)
+            pivot.plot(ax=axes[row, column])
+            axes[row, column].set_title(f"{benchmark}: {title.lower()}")
+            axes[row, column].grid(alpha=0.25)
+            axes[row, column].legend(frameon=False, fontsize=8)
+            if metric != "rolling_sharpe_0rf":
+                axes[row, column].yaxis.set_major_formatter(
+                    matplotlib.ticker.PercentFormatter(1.0)
+                )
+    fig.tight_layout()
+    fig.savefig(OUT_DIR / "benchmark_rolling_statistics.png", dpi=180)
+    plt.close(fig)
+
+
+def write_benchmark_methodology() -> None:
+    text = """# Benchmark comparison methodology
+
+- The adjusted TSMOM baseline is compared with the always-long static futures benchmark over their common 1976–2014 sample.
+- The adjusted baseline is compared with SG Trend over the available common January 2000–December 2014 sample.
+- Raw returns are the primary historical series. Volatility-matched results are also reported by scaling each benchmark to the baseline's realized volatility over the relevant common sample.
+- Volatility matching uses full-sample realized volatility and is descriptive rather than a tradable procedure.
+- Rolling return, volatility, and Sharpe ratio use a 36-month window. Sharpe ratios use a zero risk-free rate for consistency with the strategy summaries.
+- Factor regressions use monthly excess returns, six equity factors, and Newey–West HAC standard errors with three lags.
+- SG Trend may differ from this replication in instruments, fees, implementation, volatility target, and index methodology. The equity factors are not a complete risk model for a diversified futures portfolio.
+"""
+    (OUT_DIR / "benchmark_methodology.md").write_text(text, encoding="utf-8")
+
+
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -377,6 +683,26 @@ def main() -> None:
     aligned = align_with_sg_trend(strategy_returns[TSMOM_NAME])
     comparison = sg_trend_comparison(aligned)
     regression = sg_trend_regressions(aligned)
+    baseline_single_factor = single_factor_regressions(
+        aligned, "TSMOM", "Baseline"
+    )
+    sg_trend_single_factor = single_factor_regressions(
+        aligned, "SG Trend", "SG Trend"
+    )
+    combined_single_factor = pd.concat(
+        [baseline_single_factor, sg_trend_single_factor], ignore_index=True
+    )
+    baseline_joint_factor = joint_factor_regression(
+        aligned, "TSMOM", "Baseline"
+    )
+    sg_trend_joint_factor = joint_factor_regression(
+        aligned, "SG Trend", "SG Trend"
+    )
+    factor_table = factor_comparison_table(combined_single_factor)
+    rolling_betas = rolling_joint_factor_betas(aligned)
+    benchmark_summary, benchmark_monthly, benchmark_rolling = benchmark_analysis(
+        strategy_returns, aligned
+    )
 
     instrument_summary.to_csv(
         OUT_DIR / "asset_class_instrument_summary.csv", index=False, float_format="%.8g"
@@ -401,10 +727,61 @@ def main() -> None:
     regression.to_csv(
         OUT_DIR / "sg_trend_regression.csv", index=False, float_format="%.8g"
     )
+    baseline_single_factor.to_csv(
+        OUT_DIR / "baseline_single_factor_regressions.csv",
+        index=False,
+        float_format="%.8g",
+    )
+    sg_trend_single_factor.to_csv(
+        OUT_DIR / "sg_trend_single_factor_regressions.csv",
+        index=False,
+        float_format="%.8g",
+    )
+    combined_single_factor.to_csv(
+        OUT_DIR / "baseline_sg_factor_comparison.csv",
+        index=False,
+        float_format="%.8g",
+    )
+    baseline_joint_factor.to_csv(
+        OUT_DIR / "baseline_joint_factor_regression.csv",
+        index=False,
+        float_format="%.8g",
+    )
+    sg_trend_joint_factor.to_csv(
+        OUT_DIR / "sg_trend_joint_factor_regression.csv",
+        index=False,
+        float_format="%.8g",
+    )
+    factor_table.to_csv(
+        OUT_DIR / "factor_comparison_table.csv", index=False, float_format="%.8g"
+    )
+    rolling_betas.to_csv(
+        OUT_DIR / "rolling_factor_betas.csv", index=False, float_format="%.8g"
+    )
+    benchmark_summary.to_csv(
+        OUT_DIR / "benchmark_raw_volatility_matched_summary.csv",
+        index=False,
+        float_format="%.8g",
+    )
+    benchmark_monthly.to_csv(
+        OUT_DIR / "benchmark_raw_volatility_matched_monthly_returns.csv",
+        index_label="Date",
+        float_format="%.8g",
+    )
+    benchmark_rolling.to_csv(
+        OUT_DIR / "benchmark_rolling_statistics.csv",
+        index=False,
+        float_format="%.8g",
+    )
     plot_cumulative_comparison(aligned)
     plot_rolling_correlation(aligned)
     plot_overall_cumulative_returns(strategy_returns)
     plot_overall_sharpe_ratios(overall_summary)
+    plot_factor_betas(combined_single_factor)
+    plot_factor_alphas(combined_single_factor)
+    plot_benchmark_raw_and_matched(benchmark_monthly)
+    plot_benchmark_rolling_statistics(benchmark_rolling)
+    write_benchmark_methodology()
 
     print(f"Wrote analysis outputs to {OUT_DIR}")
     print(f"Strategy return source: {strategy_source}")
@@ -416,6 +793,15 @@ def main() -> None:
     print(comparison.to_string(index=False))
     print("\nSG Trend regressions:")
     print(regression.to_string(index=False))
+    print("\nSingle-factor comparison:")
+    print(factor_table.to_string(index=False))
+    print("\nJoint six-factor regressions:")
+    print(
+        pd.concat([baseline_joint_factor, sg_trend_joint_factor], ignore_index=True)
+        .to_string(index=False)
+    )
+    print("\nRaw and volatility-matched benchmark comparison:")
+    print(benchmark_summary.to_string(index=False))
 
 
 if __name__ == "__main__":
