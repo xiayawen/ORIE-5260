@@ -61,7 +61,7 @@ def find_project_root() -> Path:
 
 
 ROOT = find_project_root()
-OUT_DIR = ROOT / "outputs" / "strategy"
+OUT_DIR = ROOT / "outputs" / "strategy_backtest_adj_output"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 

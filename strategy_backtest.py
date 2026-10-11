@@ -27,7 +27,7 @@ def find_project_root() -> Path:
 
 
 ROOT = find_project_root()
-OUT_DIR = ROOT / "outputs" / "strategy"
+OUT_DIR = ROOT / "outputs" / "strategy_backtest_output"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -314,8 +314,7 @@ def portfolio_correlations(tsmom: dict, static: dict) -> pd.DataFrame:
 
 def write_group_report(summary: pd.DataFrame, correlations: pd.DataFrame,
                        asset_class_corr: pd.DataFrame) -> None:
-    report_dir = ROOT / "reports"
-    report_dir.mkdir(exist_ok=True)
+    report_dir = OUT_DIR
     rows = []
     for label, row in zip(["12-month TSMOM", "Always-long static", "Return difference"],
                           summary.to_dict("records")):
@@ -385,13 +384,13 @@ annualized mean return difference. Positive contributions show where TSMOM
 outperformed the static exposure in this sample; low correlation measures different
 return behavior, and alone does not imply superior performance.
 
-![Growth of one dollar](../outputs/strategy/cumulative_tsmom_vs_static.png)
+![Growth of one dollar](cumulative_tsmom_vs_static.png)
 
-![Cumulative arithmetic return difference](../outputs/strategy/cumulative_alpha_tsmom_minus_static.png)
+![Cumulative arithmetic return difference](cumulative_alpha_tsmom_minus_static.png)
 
 The alpha curve sums monthly differences; it is not compounded investment wealth.
 
-![Alpha contribution by asset class](../outputs/strategy/asset_class_alpha_contribution.png)
+![Alpha contribution by asset class](asset_class_alpha_contribution.png)
 
 ## Limitations and next steps
 - Full-sample volatility includes future observations, creating look-ahead bias. Retain this result as the classroom baseline and compare a rolling, historically available volatility estimate next.
@@ -404,7 +403,7 @@ The alpha curve sums monthly differences; it is not compounded investment wealth
 ## Reproduce
 From the project directory, run `python3 strategy_backtest.py` with numpy,
 pandas and matplotlib installed. Tables, figures and methodology are written
-to `outputs/strategy/`; this dated report is regenerated from the results.
+to `outputs/strategy_backtest_output/`; this dated report is regenerated from the results.
 
 ## Future weekly updates
 Create a new dated report for each week using [the weekly template](weekly_update_template.md).

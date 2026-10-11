@@ -75,7 +75,15 @@ Generates descriptive statistics for instruments and equal-weighted asset-class 
 
 ## Outputs
 
-The scripts write tables, figures, and short reports under `outputs/` and `reports/` when run. Asset-class and SG Trend comparison outputs are written to `outputs/analysis/`. The saved root-level CSV files contain selected strategy summaries and monthly return series.
+The scripts write tables and figures into separate folders under `outputs/`:
+
+- `strategy_backtest.py` → `outputs/strategy_backtest_output/`
+- `strategy_backtest_adj.py` → `outputs/strategy_backtest_adj_output/`
+- `rolling_backtest.py` → `outputs/rolling_backtest_output/`
+- `generate_strategy_analysis.py` → `outputs/strategy_analysis_output/`
+- `analysis_eda.py` → `outputs/eda_output/`
+
+Each script's generated tables, figures, and narrative reports stay together in its output folder.
 
 ## Important limitations
 

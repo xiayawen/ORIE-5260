@@ -1,7 +1,8 @@
 """Generate asset-class statistics and an SG Trend comparison.
 
 The script uses the adjusted TSMOM baseline in ``strategy_backtest_adj.py``.
-It loads saved adjusted-strategy returns from ``outputs/strategy/monthly_returns.csv``
+It loads saved adjusted-strategy returns from
+``outputs/strategy_backtest_adj_output/monthly_returns.csv``
 when available. On a clean checkout, it rebuilds the baseline from the same source
 functions so the analysis can still be reproduced.
 """
@@ -34,8 +35,10 @@ from strategy_backtest_adj import (
 TRADING_MONTHS = 12
 ROLLING_CORRELATION_MONTHS = 36
 ROOT = Path(__file__).resolve().parent
-OUT_DIR = ROOT / "outputs" / "analysis"
-SAVED_STRATEGY_RETURNS = ROOT / "outputs" / "strategy" / "monthly_returns.csv"
+OUT_DIR = ROOT / "outputs" / "strategy_analysis_output"
+SAVED_STRATEGY_RETURNS = (
+    ROOT / "outputs" / "strategy_backtest_adj_output" / "monthly_returns.csv"
+)
 LECTURE_DATA = ROOT / "Lecture3_livedata.xlsx"
 
 STRATEGY_ORDER = [

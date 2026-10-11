@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="520" viewBox="0 0 1100 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="550.0" y="28" text-anchor="middle" font-family="Arial" font-size="20" font-weight="700">Monthly return observations by asset</text>
+<text x="18" y="230.0" transform="rotate(-90 18 230.0)" text-anchor="middle" font-family="Arial" font-size="13">Non-missing monthly returns</text>
+<line x1="70" y1="55" x2="70" y2="405" stroke="#333"/>
+<line x1="70" y1="405" x2="1075" y2="405" stroke="#333"/>
+<line x1="66" y1="405.0" x2="1075" y2="405.0" stroke="#e5e7eb"/>
+<text x="62" y="409.0" text-anchor="end" font-family="Arial" font-size="11">0</text>
+<line x1="66" y1="335.0" x2="1075" y2="335.0" stroke="#e5e7eb"/>
+<text x="62" y="339.0" text-anchor="end" font-family="Arial" font-size="11">110</text>
+<line x1="66" y1="265.0" x2="1075" y2="265.0" stroke="#e5e7eb"/>
+<text x="62" y="269.0" text-anchor="end" font-family="Arial" font-size="11">220</text>
+<line x1="66" y1="195.0" x2="1075" y2="195.0" stroke="#e5e7eb"/>
+<text x="62" y="199.0" text-anchor="end" font-family="Arial" font-size="11">331</text>
+<line x1="66" y1="125.0" x2="1075" y2="125.0" stroke="#e5e7eb"/>
+<text x="62" y="129.0" text-anchor="end" font-family="Arial" font-size="11">441</text>
+<line x1="66" y1="55.0" x2="1075" y2="55.0" stroke="#e5e7eb"/>
+<text x="62" y="59.0" text-anchor="end" font-family="Arial" font-size="11">551</text>
+<rect x="70.0" y="55.0" width="15.4" height="350.0" fill="#4C78A8"/>
+<text x="77.7" y="421" text-anchor="end" transform="rotate(-90 77.7 421)" font-family="Arial" font-size="10">ZW</text>
+<rect x="87.4" y="55.0" width="15.4" height="350.0" fill="#4C78A8"/>
+<rect x="104.7" y="55.0" width="15.4" height="350.0" fill="#4C78A8"/>
+<text x="112.4" y="421" text-anchor="end" transform="rotate(-90 112.4 421)" font-family="Arial" font-size="10">ZM</text>
+<rect x="122.1" y="55.0" width="15.4" height="350.0" fill="#4C78A8"/>
+<rect x="139.4" y="62.6" width="15.4" height="342.4" fill="#4C78A8"/>
+<text x="147.1" y="421" text-anchor="end" transform="rotate(-90 147.1 421)" font-family="Arial" font-size="10">ZZ</text>
+<rect x="156.8" y="62.6" width="15.4" height="342.4" fill="#4C78A8"/>
+<rect x="174.2" y="70.2" width="15.4" height="334.8" fill="#4C78A8"/>
+<text x="181.9" y="421" text-anchor="end" transform="rotate(-90 181.9 421)" font-family="Arial" font-size="10">ZT</text>
+<rect x="191.5" y="85.5" width="15.4" height="319.5" fill="#4C78A8"/>
+<rect x="208.9" y="85.5" width="15.4" height="319.5" fill="#4C78A8"/>
+<text x="216.6" y="421" text-anchor="end" transform="rotate(-90 216.6 421)" font-family="Arial" font-size="10">CT</text>
+<rect x="226.3" y="85.5" width="15.4" height="319.5" fill="#4C78A8"/>
+<rect x="243.6" y="85.5" width="15.4" height="319.5" fill="#4C78A8"/>
+<text x="251.3" y="421" text-anchor="end" transform="rotate(-90 251.3 421)" font-family="Arial" font-size="10">ZI</text>
+<rect x="261.0" y="93.1" width="15.4" height="311.9" fill="#4C78A8"/>
+<rect x="278.3" y="93.1" width="15.4" height="311.9" fill="#4C78A8"/>
+<text x="286.0" y="421" text-anchor="end" transform="rotate(-90 286.0 421)" font-family="Arial" font-size="10">KC</text>
+<rect x="295.7" y="100.7" width="15.4" height="304.3" fill="#4C78A8"/>
+<rect x="313.1" y="100.7" width="15.4" height="304.3" fill="#4C78A8"/>
+<text x="320.8" y="421" text-anchor="end" transform="rotate(-90 320.8 421)" font-family="Arial" font-size="10">ZO</text>
+<rect x="330.4" y="100.7" width="15.4" height="304.3" fill="#4C78A8"/>
+<rect x="347.8" y="101.4" width="15.4" height="303.6" fill="#4C78A8"/>
+<text x="355.5" y="421" text-anchor="end" transform="rotate(-90 355.5 421)" font-family="Arial" font-size="10">FN</text>
+<rect x="365.2" y="108.4" width="15.4" height="296.6" fill="#4C78A8"/>
+<rect x="382.5" y="108.4" width="15.4" height="296.6" fill="#4C78A8"/>
+<text x="390.2" y="421" text-anchor="end" transform="rotate(-90 390.2 421)" font-family="Arial" font-size="10">SN</text>
+<rect x="399.9" y="123.6" width="15.4" height="281.4" fill="#4C78A8"/>
+<rect x="417.2" y="123.6" width="15.4" height="281.4" fill="#4C78A8"/>
+<text x="424.9" y="421" text-anchor="end" transform="rotate(-90 424.9 421)" font-family="Arial" font-size="10">CN</text>
+<rect x="434.6" y="123.6" width="15.4" height="281.4" fill="#4C78A8"/>
+<rect x="452.0" y="123.6" width="15.4" height="281.4" fill="#4C78A8"/>
+<text x="459.6" y="421" text-anchor="end" transform="rotate(-90 459.6 421)" font-family="Arial" font-size="10">US</text>
+<rect x="469.3" y="146.5" width="15.4" height="258.5" fill="#4C78A8"/>
+<rect x="486.7" y="146.5" width="15.4" height="258.5" fill="#4C78A8"/>
+<text x="494.4" y="421" text-anchor="end" transform="rotate(-90 494.4 421)" font-family="Arial" font-size="10">MW</text>
+<rect x="504.1" y="154.7" width="15.4" height="250.3" fill="#4C78A8"/>
+<rect x="521.4" y="156.0" width="15.4" height="249.0" fill="#4C78A8"/>
+<text x="529.1" y="421" text-anchor="end" transform="rotate(-90 529.1 421)" font-family="Arial" font-size="10">SP</text>
+<rect x="538.8" y="161.7" width="15.4" height="243.3" fill="#4C78A8"/>
+<rect x="556.1" y="161.7" width="15.4" height="243.3" fill="#4C78A8"/>
+<text x="563.8" y="421" text-anchor="end" transform="rotate(-90 563.8 421)" font-family="Arial" font-size="10">ZA</text>
+<rect x="573.5" y="169.3" width="15.4" height="235.7" fill="#4C78A8"/>
+<rect x="590.9" y="177.0" width="15.4" height="228.0" fill="#4C78A8"/>
+<text x="598.5" y="421" text-anchor="end" transform="rotate(-90 598.5 421)" font-family="Arial" font-size="10">ZB</text>
+<rect x="608.2" y="192.2" width="15.4" height="212.8" fill="#4C78A8"/>
+<rect x="625.6" y="199.8" width="15.4" height="205.2" fill="#4C78A8"/>
+<text x="633.3" y="421" text-anchor="end" transform="rotate(-90 633.3 421)" font-family="Arial" font-size="10">AN</text>
+<rect x="642.9" y="207.5" width="15.4" height="197.5" fill="#4C78A8"/>
+<rect x="660.3" y="207.5" width="15.4" height="197.5" fill="#4C78A8"/>
+<text x="668.0" y="421" text-anchor="end" transform="rotate(-90 668.0 421)" font-family="Arial" font-size="10">ZK</text>
+<rect x="677.7" y="215.1" width="15.4" height="189.9" fill="#4C78A8"/>
+<rect x="695.0" y="215.7" width="15.4" height="189.3" fill="#4C78A8"/>
+<text x="702.7" y="421" text-anchor="end" transform="rotate(-90 702.7 421)" font-family="Arial" font-size="10">DT</text>
+<rect x="712.4" y="216.3" width="15.4" height="188.7" fill="#4C78A8"/>
+<rect x="729.8" y="220.2" width="15.4" height="184.8" fill="#4C78A8"/>
+<text x="737.4" y="421" text-anchor="end" transform="rotate(-90 737.4 421)" font-family="Arial" font-size="10">TU</text>
+<rect x="747.1" y="222.7" width="15.4" height="182.3" fill="#4C78A8"/>
+<rect x="764.5" y="222.7" width="15.4" height="182.3" fill="#4C78A8"/>
+<text x="772.2" y="421" text-anchor="end" transform="rotate(-90 772.2 421)" font-family="Arial" font-size="10">ZN</text>
+<rect x="781.8" y="231.0" width="15.4" height="174.0" fill="#4C78A8"/>
+<rect x="799.2" y="238.6" width="15.4" height="166.4" fill="#4C78A8"/>
+<text x="806.9" y="421" text-anchor="end" transform="rotate(-90 806.9 421)" font-family="Arial" font-size="10">RL</text>
+<rect x="816.6" y="239.2" width="15.4" height="165.8" fill="#4C78A8"/>
+<rect x="833.9" y="248.7" width="15.4" height="156.3" fill="#4C78A8"/>
+<text x="841.6" y="421" text-anchor="end" transform="rotate(-90 841.6 421)" font-family="Arial" font-size="10">CB</text>
+<rect x="851.3" y="255.7" width="15.4" height="149.3" fill="#4C78A8"/>
+<rect x="868.7" y="262.7" width="15.4" height="142.3" fill="#4C78A8"/>
+<text x="876.3" y="421" text-anchor="end" transform="rotate(-90 876.3 421)" font-family="Arial" font-size="10">ND</text>
+<rect x="886.0" y="273.5" width="15.4" height="131.5" fill="#4C78A8"/>
+<rect x="903.4" y="275.4" width="15.4" height="129.6" fill="#4C78A8"/>
+<text x="911.1" y="421" text-anchor="end" transform="rotate(-90 911.1 421)" font-family="Arial" font-size="10">HS</text>
+<rect x="920.7" y="275.4" width="15.4" height="129.6" fill="#4C78A8"/>
+<rect x="938.1" y="278.0" width="15.4" height="127.0" fill="#4C78A8"/>
+<text x="945.8" y="421" text-anchor="end" transform="rotate(-90 945.8 421)" font-family="Arial" font-size="10">ZD</text>
+<rect x="955.5" y="283.7" width="15.4" height="121.3" fill="#4C78A8"/>
+<rect x="972.8" y="284.3" width="15.4" height="120.7" fill="#4C78A8"/>
+<text x="980.5" y="421" text-anchor="end" transform="rotate(-90 980.5 421)" font-family="Arial" font-size="10">UZ</text>
+<rect x="990.2" y="284.3" width="15.4" height="120.7" fill="#4C78A8"/>
+<rect x="1007.6" y="300.8" width="15.4" height="104.2" fill="#4C78A8"/>
+<text x="1015.2" y="421" text-anchor="end" transform="rotate(-90 1015.2 421)" font-family="Arial" font-size="10">XU</text>
+<rect x="1024.9" y="308.4" width="15.4" height="96.6" fill="#4C78A8"/>
+<rect x="1042.3" y="310.4" width="15.4" height="94.6" fill="#4C78A8"/>
+<text x="1050.0" y="421" text-anchor="end" transform="rotate(-90 1050.0 421)" font-family="Arial" font-size="10">XX</text>
+<rect x="1059.6" y="357.4" width="15.4" height="47.6" fill="#4C78A8"/>
+</svg>

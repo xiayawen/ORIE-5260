@@ -11,7 +11,7 @@ import statsmodels.api as sm
 from strategy_backtest import read_returns, momentum_signal, build_strategy_set
 
 ROOT = Path(__file__).resolve().parent
-OUT = ROOT / 'outputs' / 'rolling'
+OUT = ROOT / 'outputs' / 'rolling_backtest_output'
 COST_BPS = (0, 5, 10, 25)
 WINDOW = 12
 
@@ -58,7 +58,6 @@ def regression(y, factors, name, specification):
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    (ROOT / 'reports').mkdir(parents=True, exist_ok=True)
     r = read_returns()
     tw, sw, eligible = matched_weights(r)
     fw, fs, _ = matched_weights(r, rolling=False)
@@ -127,7 +126,7 @@ def main():
     for row in summaries:
         lines.append(f"| {row['strategy']} | {row['cost_bps']} | {row['cagr']:.2%} | {row['annual_vol']:.2%} | {row['sharpe_zero_rf']:.3f} | {row['max_drawdown']:.2%} |")
     lines += ['', 'Sharpe uses annualized arithmetic mean / annual volatility, unlike the prior baseline report’s CAGR / volatility.', '',
-              '![Comparison](../outputs/rolling/comparison.png)','![Costs](../outputs/rolling/cost_sensitivity.png)', '', '## Regression alpha',
+              '![Comparison](comparison.png)','![Costs](cost_sensitivity.png)', '', '## Regression alpha',
               'Exploratory OLS with Newey–West HAC standard errors (3 monthly lags). Static regression uses raw strategy and static returns; its intercept is not a risk-free-adjusted CAPM alpha. The six-factor regression subtracts the supplied RF from strategy returns and uses Mkt-RF, SMB, HML, Mom, RMW and CMA; its sample is 2000–2014. Equity factors are an exploratory model, not a complete risk model for futures. Annual alpha is 12 times the monthly intercept.',
               '', '| Strategy | Model | Months | Annual alpha | HAC t | p-value |','|---|---|---:|---:|---:|---:|']
     for row in regressions:
@@ -136,8 +135,8 @@ def main():
               f"Rolling portfolios reach maximum gross exposure of {max(d['max_gross_exposure'] for d in diagnostics if d['strategy'].startswith('rolling')):.2f} times capital. Low rolling volatility can create extreme leverage; results require a leverage-cap sensitivity study before practical use.",
               'No course document specifying regression alpha was found in the workspace. The supplied slide asks to illustrate alpha without defining a regression model; confirmation remains pending. Regression results are supplementary, not proof that this requirement was assigned.',
               'Missing realized returns for held instruments are zero-filled and counted in diagnostics.csv. This assumption can bias performance; matching eligibility does not eliminate this data issue. Prices/continuous-contract construction and extreme returns remain unverified. Cost assumptions are sensitivity scenarios, not measured execution costs.',
-              '', '## Reproduce','Run `python3 rolling_backtest.py`. Dependencies: numpy, pandas, matplotlib, openpyxl, statsmodels. Outputs: `outputs/rolling/`. The previous dated report is preserved.']
-    (ROOT/'reports'/'group_update_2026-10-07.md').write_text('\n'.join(lines)+'\n')
+              '', '## Reproduce','Run `python3 rolling_backtest.py`. Dependencies: numpy, pandas, matplotlib, openpyxl, statsmodels. Outputs: `outputs/rolling_backtest_output/`. The previous dated report is preserved.']
+    (OUT/'group_update_2026-10-07.md').write_text('\n'.join(lines)+'\n')
     print(summary.to_string(index=False));print(pd.DataFrame(regressions).to_string(index=False))
 
 if __name__ == '__main__':

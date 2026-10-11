@@ -1,0 +1,5 @@
+asset_class,correlation_tsmom_static,tsmom_annualized_contribution,static_annualized_contribution,alpha_annualized_contribution,alpha_monthly_volatility
+COMM,0.21061,0.0515137,0.0234432,0.0280705,0.033066
+EQ,-0.118543,0.0165776,0.0136295,0.00294818,0.0189527
+FI,0.684459,0.0182867,0.026156,-0.0078693,0.00851303
+FX,-0.123424,0.0213193,0.00497925,0.01634,0.0177287

@@ -6,7 +6,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "FuturesUnderlyingData"
-OUT_DIR = ROOT / "outputs" / "eda"
+OUT_DIR = ROOT / "outputs" / "eda_output"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -34,7 +34,7 @@ def compute_monthly_returns_from_daily() -> pd.DataFrame:
         daily[date_col] = pd.to_datetime(daily[date_col], errors="coerce")
         daily["Close"] = pd.to_numeric(daily["Close"], errors="coerce")
         daily = daily.dropna(subset=[date_col, "Close"]).sort_values(date_col)
-        monthly_close = daily.set_index(date_col)["Close"].resample("ME").last().dropna()
+        monthly_close = daily.set_index(date_col)["Close"].resample("M").last().dropna()
         series[symbol] = monthly_close.pct_change()
     monthly = pd.DataFrame(series).sort_index()
     monthly.index.name = "Date"

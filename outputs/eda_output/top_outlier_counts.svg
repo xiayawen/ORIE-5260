@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="520" viewBox="0 0 1100 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="550.0" y="28" text-anchor="middle" font-family="Arial" font-size="20" font-weight="700">Top assets by outlier count</text>
+<text x="18" y="230.0" transform="rotate(-90 18 230.0)" text-anchor="middle" font-family="Arial" font-size="13">Outlier months</text>
+<line x1="70" y1="55" x2="70" y2="405" stroke="#333"/>
+<line x1="70" y1="405" x2="1075" y2="405" stroke="#333"/>
+<line x1="66" y1="405.0" x2="1075" y2="405.0" stroke="#e5e7eb"/>
+<text x="62" y="409.0" text-anchor="end" font-family="Arial" font-size="11">0</text>
+<line x1="66" y1="335.0" x2="1075" y2="335.0" stroke="#e5e7eb"/>
+<text x="62" y="339.0" text-anchor="end" font-family="Arial" font-size="11">4</text>
+<line x1="66" y1="265.0" x2="1075" y2="265.0" stroke="#e5e7eb"/>
+<text x="62" y="269.0" text-anchor="end" font-family="Arial" font-size="11">8</text>
+<line x1="66" y1="195.0" x2="1075" y2="195.0" stroke="#e5e7eb"/>
+<text x="62" y="199.0" text-anchor="end" font-family="Arial" font-size="11">13</text>
+<line x1="66" y1="125.0" x2="1075" y2="125.0" stroke="#e5e7eb"/>
+<text x="62" y="129.0" text-anchor="end" font-family="Arial" font-size="11">17</text>
+<line x1="66" y1="55.0" x2="1075" y2="55.0" stroke="#e5e7eb"/>
+<text x="62" y="59.0" text-anchor="end" font-family="Arial" font-size="11">21</text>
+<rect x="70.0" y="55.0" width="38.3" height="350.0" fill="#F58518"/>
+<text x="89.1" y="421" text-anchor="end" transform="rotate(-90 89.1 421)" font-family="Arial" font-size="10">EC</text>
+<rect x="110.3" y="288.3" width="38.3" height="116.7" fill="#F58518"/>
+<text x="129.4" y="421" text-anchor="end" transform="rotate(-90 129.4 421)" font-family="Arial" font-size="10">SS</text>
+<rect x="150.6" y="288.3" width="38.3" height="116.7" fill="#F58518"/>
+<text x="169.7" y="421" text-anchor="end" transform="rotate(-90 169.7 421)" font-family="Arial" font-size="10">MW</text>
+<rect x="190.8" y="305.0" width="38.3" height="100.0" fill="#F58518"/>
+<text x="210.0" y="421" text-anchor="end" transform="rotate(-90 210.0 421)" font-family="Arial" font-size="10">ZM</text>
+<rect x="231.1" y="305.0" width="38.3" height="100.0" fill="#F58518"/>
+<text x="250.3" y="421" text-anchor="end" transform="rotate(-90 250.3 421)" font-family="Arial" font-size="10">ZP</text>
+<rect x="271.4" y="321.7" width="38.3" height="83.3" fill="#F58518"/>
+<text x="290.5" y="421" text-anchor="end" transform="rotate(-90 290.5 421)" font-family="Arial" font-size="10">ZC</text>
+<rect x="311.7" y="321.7" width="38.3" height="83.3" fill="#F58518"/>
+<text x="330.8" y="421" text-anchor="end" transform="rotate(-90 330.8 421)" font-family="Arial" font-size="10">ZL</text>
+<rect x="352.0" y="338.3" width="38.3" height="66.7" fill="#F58518"/>
+<text x="371.1" y="421" text-anchor="end" transform="rotate(-90 371.1 421)" font-family="Arial" font-size="10">MP</text>
+<rect x="392.2" y="338.3" width="38.3" height="66.7" fill="#F58518"/>
+<text x="411.4" y="421" text-anchor="end" transform="rotate(-90 411.4 421)" font-family="Arial" font-size="10">KC</text>
+<rect x="432.5" y="338.3" width="38.3" height="66.7" fill="#F58518"/>
+<text x="451.7" y="421" text-anchor="end" transform="rotate(-90 451.7 421)" font-family="Arial" font-size="10">ZI</text>
+<rect x="472.8" y="338.3" width="38.3" height="66.7" fill="#F58518"/>
+<text x="491.9" y="421" text-anchor="end" transform="rotate(-90 491.9 421)" font-family="Arial" font-size="10">ZG</text>
+<rect x="513.1" y="338.3" width="38.3" height="66.7" fill="#F58518"/>
+<text x="532.2" y="421" text-anchor="end" transform="rotate(-90 532.2 421)" font-family="Arial" font-size="10">ZS</text>
+<rect x="553.4" y="355.0" width="38.3" height="50.0" fill="#F58518"/>
+<text x="572.5" y="421" text-anchor="end" transform="rotate(-90 572.5 421)" font-family="Arial" font-size="10">JO</text>
+<rect x="593.6" y="355.0" width="38.3" height="50.0" fill="#F58518"/>
+<text x="612.8" y="421" text-anchor="end" transform="rotate(-90 612.8 421)" font-family="Arial" font-size="10">SB</text>
+<rect x="633.9" y="355.0" width="38.3" height="50.0" fill="#F58518"/>
+<text x="653.1" y="421" text-anchor="end" transform="rotate(-90 653.1 421)" font-family="Arial" font-size="10">CT</text>
+<rect x="674.2" y="355.0" width="38.3" height="50.0" fill="#F58518"/>
+<text x="693.3" y="421" text-anchor="end" transform="rotate(-90 693.3 421)" font-family="Arial" font-size="10">CN</text>
+<rect x="714.5" y="355.0" width="38.3" height="50.0" fill="#F58518"/>
+<text x="733.6" y="421" text-anchor="end" transform="rotate(-90 733.6 421)" font-family="Arial" font-size="10">ZA</text>
+<rect x="754.8" y="355.0" width="38.3" height="50.0" fill="#F58518"/>
+<text x="773.9" y="421" text-anchor="end" transform="rotate(-90 773.9 421)" font-family="Arial" font-size="10">ZB</text>
+<rect x="795.0" y="355.0" width="38.3" height="50.0" fill="#F58518"/>
+<text x="814.2" y="421" text-anchor="end" transform="rotate(-90 814.2 421)" font-family="Arial" font-size="10">ZF</text>
+<rect x="835.3" y="355.0" width="38.3" height="50.0" fill="#F58518"/>
+<text x="854.5" y="421" text-anchor="end" transform="rotate(-90 854.5 421)" font-family="Arial" font-size="10">ZW</text>
+<rect x="875.6" y="371.7" width="38.3" height="33.3" fill="#F58518"/>
+<text x="894.7" y="421" text-anchor="end" transform="rotate(-90 894.7 421)" font-family="Arial" font-size="10">ZO</text>
+<rect x="915.9" y="371.7" width="38.3" height="33.3" fill="#F58518"/>
+<text x="935.0" y="421" text-anchor="end" transform="rotate(-90 935.0 421)" font-family="Arial" font-size="10">ZR</text>
+<rect x="956.2" y="371.7" width="38.3" height="33.3" fill="#F58518"/>
+<text x="975.3" y="421" text-anchor="end" transform="rotate(-90 975.3 421)" font-family="Arial" font-size="10">ZT</text>
+<rect x="996.4" y="371.7" width="38.3" height="33.3" fill="#F58518"/>
+<text x="1015.6" y="421" text-anchor="end" transform="rotate(-90 1015.6 421)" font-family="Arial" font-size="10">SP</text>
+<rect x="1036.7" y="371.7" width="38.3" height="33.3" fill="#F58518"/>
+<text x="1055.9" y="421" text-anchor="end" transform="rotate(-90 1055.9 421)" font-family="Arial" font-size="10">US</text>
+</svg>
