@@ -69,9 +69,13 @@ This script focuses on avoiding full-sample volatility look-ahead, aligning the 
 
 Performs data-quality and exploratory analysis, including coverage, missingness, summary statistics, robust outlier detection, correlations, and a comparison of supplied monthly returns with returns reconstructed from daily closes.
 
+### `generate_strategy_analysis.py`
+
+Generates descriptive statistics for instruments and equal-weighted asset-class return series. It also compares the adjusted TSMOM baseline with SG Trend over their common 2000–2014 sample, including performance statistics, HAC regressions, cumulative growth, and rolling correlation. The script loads saved adjusted-strategy returns when available and otherwise rebuilds the baseline from `strategy_backtest_adj.py`.
+
 ## Outputs
 
-The scripts write tables, figures, and short reports under `outputs/` and `reports/` when run. The saved root-level CSV files contain selected strategy summaries and monthly return series.
+The scripts write tables, figures, and short reports under `outputs/` and `reports/` when run. Asset-class and SG Trend comparison outputs are written to `outputs/analysis/`. The saved root-level CSV files contain selected strategy summaries and monthly return series.
 
 ## Important limitations
 

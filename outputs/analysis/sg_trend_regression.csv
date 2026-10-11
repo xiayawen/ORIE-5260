@@ -1,0 +1,3 @@
+specification,start,end,months,alpha_annual_arithmetic,alpha_hac_t,alpha_pvalue,alpha_ci_lower,alpha_ci_upper,beta_sg_trend,beta_hac_t,r_squared
+raw_returns_HAC3,2000-01,2014-12,180,0.065228394,2.4793375,0.013162668,0.013664094,0.11679269,0.54176724,7.3754103,0.38002823
+excess_returns_HAC3,2000-01,2014-12,180,0.056852708,2.1651757,0.030374235,0.0053884033,0.10831701,0.54185679,7.3549563,0.37937018
