@@ -25,6 +25,7 @@ from strategy_backtest_adj import (
     STATIC_NAME,
     TSMOM_NAME,
     build_baseline,
+    build_experiments,
     read_asset_map,
     read_returns,
 )
@@ -36,6 +37,23 @@ ROOT = Path(__file__).resolve().parent
 OUT_DIR = ROOT / "outputs" / "analysis"
 SAVED_STRATEGY_RETURNS = ROOT / "outputs" / "strategy" / "monthly_returns.csv"
 LECTURE_DATA = ROOT / "Lecture3_livedata.xlsx"
+
+STRATEGY_ORDER = [
+    TSMOM_NAME,
+    "E1_EWMA_Vol",
+    "E2_AssetClass_Budget",
+    "E3_Multi_Lookback",
+    "E4_Combined",
+    STATIC_NAME,
+]
+STRATEGY_LABELS = {
+    TSMOM_NAME: "Baseline",
+    "E1_EWMA_Vol": "E1 EWMA vol",
+    "E2_AssetClass_Budget": "E2 class budget",
+    "E3_Multi_Lookback": "E3 multi-lookback",
+    "E4_Combined": "E4 combined",
+    STATIC_NAME: "Static benchmark",
+}
 
 
 def annualized_statistics(returns: pd.Series) -> dict[str, float]:
@@ -67,13 +85,88 @@ def load_adjusted_strategy_returns(
         saved = pd.read_csv(SAVED_STRATEGY_RETURNS, index_col=0, parse_dates=True)
         required = {TSMOM_NAME, STATIC_NAME}
         if required.issubset(saved.columns):
-            return saved[[TSMOM_NAME, STATIC_NAME]].sort_index(), str(SAVED_STRATEGY_RETURNS)
+            columns = [name for name in STRATEGY_ORDER if name in saved.columns]
+            return saved[columns].sort_index(), str(SAVED_STRATEGY_RETURNS)
 
     tsmom, static = build_baseline(returns, asset_map)
-    rebuilt = pd.DataFrame(
-        {TSMOM_NAME: tsmom["returns"], STATIC_NAME: static["returns"]}
-    )
+    experiments = build_experiments(returns, asset_map)
+    results = [tsmom, *experiments, static]
+    rebuilt = pd.DataFrame({result["name"]: result["returns"] for result in results})
     return rebuilt, "rebuilt from strategy_backtest_adj.py"
+
+
+def overall_strategy_statistics(strategy_returns: pd.DataFrame) -> pd.DataFrame:
+    """Summarize all available adjusted strategies over one common sample."""
+    available = [name for name in STRATEGY_ORDER if name in strategy_returns.columns]
+    common = strategy_returns[available].dropna()
+    rows = []
+    for name in available:
+        row = {
+            "strategy": name,
+            "label": STRATEGY_LABELS[name],
+            "start": common.index.min().date(),
+            "end": common.index.max().date(),
+            "months": len(common),
+        }
+        row.update(annualized_statistics(common[name]))
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def plot_overall_cumulative_returns(strategy_returns: pd.DataFrame) -> None:
+    """Plot uncompensated, compounded performance over the common backtest period."""
+    available = [name for name in STRATEGY_ORDER if name in strategy_returns.columns]
+    common = strategy_returns[available].dropna()
+    wealth = (1.0 + common).cumprod()
+
+    fig, ax = plt.subplots(figsize=(12, 7))
+    for name in available:
+        linewidth = 2.3 if name == TSMOM_NAME else 1.6
+        linestyle = "--" if name == STATIC_NAME else "-"
+        ax.plot(
+            wealth.index,
+            wealth[name],
+            label=STRATEGY_LABELS[name],
+            linewidth=linewidth,
+            linestyle=linestyle,
+        )
+    ax.set_yscale("log")
+    ax.set_title("Unscaled strategy performance over the common backtest period")
+    ax.set_ylabel("Growth of 1 (compounded, log scale)")
+    ax.grid(alpha=0.25)
+    ax.legend(frameon=False, ncol=2)
+    fig.tight_layout()
+    fig.savefig(
+        OUT_DIR / "overall_cumulative_returns.png", dpi=180, bbox_inches="tight"
+    )
+    plt.close(fig)
+
+
+def plot_overall_sharpe_ratios(summary: pd.DataFrame) -> None:
+    """Compare zero-risk-free-rate Sharpe ratios on the common sample."""
+    colors = [
+        "#1f4e79" if name == TSMOM_NAME else "#9a9a9a" if name == STATIC_NAME else "#e07b00"
+        for name in summary["strategy"]
+    ]
+    fig, ax = plt.subplots(figsize=(10, 5.5))
+    bars = ax.bar(summary["label"], summary["sharpe_0rf"], color=colors)
+    for bar, value in zip(bars, summary["sharpe_0rf"]):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            value + 0.02,
+            f"{value:.2f}",
+            ha="center",
+            va="bottom",
+        )
+    ax.set_title("Annualized Sharpe ratios over the common backtest period")
+    ax.set_ylabel("Annual mean return / annual volatility (RF = 0)")
+    ax.tick_params(axis="x", rotation=20)
+    ax.grid(axis="y", alpha=0.25)
+    fig.tight_layout()
+    fig.savefig(
+        OUT_DIR / "overall_sharpe_ratios.png", dpi=180, bbox_inches="tight"
+    )
+    plt.close(fig)
 
 
 def instrument_statistics(
@@ -277,6 +370,7 @@ def main() -> None:
 
     instrument_summary = instrument_statistics(returns, asset_map)
     class_summary, class_monthly = asset_class_statistics(returns, asset_map)
+    overall_summary = overall_strategy_statistics(strategy_returns)
     aligned = align_with_sg_trend(strategy_returns[TSMOM_NAME])
     comparison = sg_trend_comparison(aligned)
     regression = sg_trend_regressions(aligned)
@@ -289,6 +383,9 @@ def main() -> None:
     )
     class_monthly.to_csv(
         OUT_DIR / "asset_class_monthly_returns.csv", index_label="Date", float_format="%.8g"
+    )
+    overall_summary.to_csv(
+        OUT_DIR / "overall_strategy_summary.csv", index=False, float_format="%.8g"
     )
     aligned.to_csv(
         OUT_DIR / "sg_trend_aligned_monthly_returns.csv",
@@ -303,11 +400,15 @@ def main() -> None:
     )
     plot_cumulative_comparison(aligned)
     plot_rolling_correlation(aligned)
+    plot_overall_cumulative_returns(strategy_returns)
+    plot_overall_sharpe_ratios(overall_summary)
 
     print(f"Wrote analysis outputs to {OUT_DIR}")
     print(f"Strategy return source: {strategy_source}")
     print("\nAsset-class summary:")
     print(class_summary.to_string(index=False))
+    print("\nOverall strategy summary:")
+    print(overall_summary.to_string(index=False))
     print("\nSG Trend comparison:")
     print(comparison.to_string(index=False))
     print("\nSG Trend regressions:")

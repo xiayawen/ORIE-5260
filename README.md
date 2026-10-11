@@ -71,7 +71,7 @@ Performs data-quality and exploratory analysis, including coverage, missingness,
 
 ### `generate_strategy_analysis.py`
 
-Generates descriptive statistics for instruments and equal-weighted asset-class return series. It also compares the adjusted TSMOM baseline with SG Trend over their common 2000–2014 sample, including performance statistics, HAC regressions, cumulative growth, and rolling correlation. The script loads saved adjusted-strategy returns when available and otherwise rebuilds the baseline from `strategy_backtest_adj.py`.
+Generates descriptive statistics for instruments and equal-weighted asset-class return series. It also compares the adjusted TSMOM baseline with SG Trend over their common 2000–2014 sample, including performance statistics, HAC regressions, cumulative growth, and rolling correlation. Whole-period outputs compare the cumulative returns and Sharpe ratios of the baseline, four experiments, and static benchmark. The script loads saved adjusted-strategy returns when available and otherwise rebuilds them from `strategy_backtest_adj.py`.
 
 ## Outputs
 
