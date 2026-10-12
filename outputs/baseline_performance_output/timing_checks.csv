@@ -1,0 +1,6 @@
+check,max_abs_error,passed
+execution_weights_equal_prior_month_weights,0.0,True
+portfolio_return_equals_lagged_weights_times_returns,0.0,True
+weights_at_1985-12-31_unchanged_when_later_data_removed,0.0,True
+weights_at_1998-08-31_unchanged_when_later_data_removed,0.0,True
+weights_at_2008-10-31_unchanged_when_later_data_removed,0.0,True
