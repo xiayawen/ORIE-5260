@@ -21,8 +21,8 @@ The strategy backtests use monthly returns and rebalance monthly. Weights formed
 - `baseline_return_attribution.py`: attributes baseline returns by instrument, asset class, direction, period, drawdown, and market regime.
 - `baseline_risk_analysis.py`: describes exposure, realized risk, drawdowns, and diagonal risk concentration.
 - `validate_diagonal_risk_model.py`: compares diagonal predicted volatility with subsequent realized volatility.
-- `signal_diagnostics.py`: documentation stub for planned autocorrelation and signal-predictiveness analysis.
-- `baseline_performance_analysis.py`: documentation stub for a planned consolidated baseline-performance analysis.
+- `signal_diagnostics.py`: measures return and volatility autocorrelation and tests the predictiveness of 1-, 3-, 6-, and 12-month momentum signals.
+- `baseline_performance_analysis.py`: consolidates baseline performance, drawdown recovery, rolling metrics, turnover, transaction costs, and exposure.
 
 Each implemented script writes its tables and figures to a corresponding folder under `outputs/`.
 
@@ -91,17 +91,40 @@ Transaction costs are sensitivity assumptions. The backtests do not include cont
 
 The baseline-analysis plan contains seven items.
 
-### 1. Autocorrelation analysis — planned
+### 1. Autocorrelation analysis — completed
 
-`signal_diagnostics.py` will calculate return autocorrelation at lags 1–12, autocorrelation of absolute and squared returns, results by instrument and asset class, and stability across periods. The file currently contains documentation comments only.
+`signal_diagnostics.py` reports:
 
-### 2. Signal-predictiveness analysis — planned
+- Monthly return autocorrelation at lags 1–12 by instrument, with 95% significance bands and a Ljung–Box Q(12) test.
+- Autocorrelation of absolute and squared returns to measure volatility persistence.
+- Cross-instrument mean and median autocorrelation by asset class.
+- Stability across 1969–1979, the 1980s, 1990s, 2000s, and 2010–2014.
 
-`signal_diagnostics.py` will test next-month returns following positive and negative signals, return spreads, directional hit rates, 1-, 3-, 6-, and 12-month signals, and results by asset class and period. This analysis has not yet been implemented.
+Gaps in a series are kept in place so that each lag pairs months exactly that far apart. Results are saved in `outputs/signal_diagnostics_output/`.
 
-### 3. Baseline performance analysis — planned as a consolidated script
+### 2. Signal-predictiveness analysis — completed
 
-`baseline_performance_analysis.py` will consolidate cumulative and rolling performance, drawdown recovery, turnover, transaction costs, and gross, net, long, and short exposure. Several individual measures already appear in the existing backtests, but the dedicated script currently contains documentation comments only.
+`signal_diagnostics.py` also tests the 1-, 3-, 6-, and 12-month momentum signals defined in `strategy_backtest_adj.py`. It reports:
+
+- Mean next-month return after positive and negative signals and their spread.
+- Directional hit rates, overall and separately for positive and negative signals.
+- Raw and volatility-scaled signed (signal × return) returns.
+- Results by lookback, instrument, asset class, and period.
+
+A signal formed through month `t-1` is evaluated against the return in month `t`. Because instrument-months within a month are correlated, t-statistics use the monthly equal-weighted average signed return with Newey–West HAC standard errors (three lags). The analysis uses all available history from 1969, not only the 1976+ baseline window. Results are saved in `outputs/signal_diagnostics_output/`.
+
+### 3. Baseline performance analysis — completed
+
+`baseline_performance_analysis.py` rebuilds the adjusted baseline and reports:
+
+- Checks that weights formed at `t` earn month `t+1` returns and are unchanged when later data are removed.
+- Cumulative return, CAGR, annualized return and volatility, Sharpe ratio, and Calmar ratio.
+- Maximum drawdown, recovery time, and longest time underwater.
+- Rolling 12-, 36-, and 60-month return, volatility, and Sharpe ratio.
+- Turnover, signal flips, and performance after 0, 5, 10, and 25 basis points per one-way change in target weight, including the break-even cost.
+- Gross, net, long, and short exposure, in total and by asset class.
+
+The static benchmark is reported alongside for reference. The script also saves standardized baseline returns, instrument contributions, executed weights, volatility estimates, exposures, and turnover for downstream analyses. Results are saved in `outputs/baseline_performance_output/`.
 
 ### 4. Return attribution — completed
 
