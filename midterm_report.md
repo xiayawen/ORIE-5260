@@ -30,9 +30,13 @@ Absolute returns show much stronger persistence than raw returns. Across instrum
 
 The data are suitable for a diversified trend-following study, but the unequal histories, large commodity observations, and remaining reconstruction discrepancies should remain visible in robustness checks.
 
-## Backtest strategy construction
+## Two baseline versions
 
-The main strategy is the adjusted baseline implemented in `strategy_backtest_adj.py`. It is a monthly time-series momentum strategy with a 12-month signal, expanding-window instrument volatility, inverse-volatility scaling, and equal allocation across eligible instruments. The backtest runs from January 1976 through December 2014.
+We evaluate two baseline versions: the rolling baseline in `rolling_backtest.py` and the course PPT / adjusted baseline in `strategy_backtest_adj.py`. Detailed signal, return-attribution, risk-validation, factor, and SG Trend analyses below use the adjusted baseline unless explicitly labeled otherwise.
+
+### Baseline A: course PPT / adjusted
+
+The adjusted baseline is implemented in `strategy_backtest_adj.py`. It is a monthly time-series momentum strategy with a 12-month signal, expanding-window instrument volatility, inverse-volatility scaling, and equal allocation across eligible instruments. The backtest runs from January 1976 through December 2014.
 
 ### Methodology
 
@@ -66,9 +70,25 @@ and the portfolio divides these positions equally across the eligible markets. P
 - Transaction costs are tested separately at 0, 5, 10, and 25 basis points per one-way change in target weight.
 - The static benchmark is always long and uses the same instrument-level volatility scaling and eligibility logic.
 
-This construction avoids the original classroom backtest's full-sample volatility look-ahead. It does not yet use covariance-aware portfolio risk or a portfolio-level volatility target.
+Both baseline versions form signals and estimate instrument risk using information available through the formation month, then execute in the following month. Neither currently implements covariance-aware portfolio risk or a portfolio-level volatility target.
 
-## Backtest results and analysis
+### Baseline B: rolling volatility and compounded signal
+
+`rolling_backtest.py` implements the second baseline. It uses the sign of the compounded trailing 12-month return, trailing 12-month annualized volatility, and inverse-volatility scaling with a 40% instrument-level parameter. TSMOM and static share an eligibility set requiring a valid signal and positive, valid rolling volatility. Formation-month weights execute one month later. Portfolio wealth compounds in both baseline versions.
+
+The rolling evaluation covers February 1970–December 2014 (539 months), whereas the PPT / adjusted evaluation covers January 1976–December 2014 (468 months). Both use conventional zero-RF Sharpe: annualized arithmetic mean divided by annualized volatility. Signal aggregation, risk windows, eligibility, and sample periods all differ, so the comparison does not isolate the effect of compounding.
+
+| Rolling baseline | CAGR | Annualized volatility | Sharpe, RF = 0 | Maximum drawdown |
+| --- | ---: | ---: | ---: | ---: |
+| TSMOM, 0 bps | 19.12% | 18.05% | 1.06 | -27.58% |
+| Static, 0 bps | 13.33% | 21.89% | 0.68 | -71.78% |
+| TSMOM, 5 bps | 18.21% | 18.05% | 1.02 | -27.76% |
+| TSMOM, 10 bps | 17.30% | 18.06% | 0.97 | -27.93% |
+| TSMOM, 25 bps | 14.60% | 18.12% | 0.84 | -28.45% |
+
+These figures use only the `rolling_tsmom` and `rolling_static` rows in `outputs/rolling_backtest_output/performance_summary.csv`. Average monthly traded notional for rolling TSMOM is 1.30. At 25 bps, annual arithmetic cost drag is 3.90%. Costs remain illustrative and omit contract-specific spreads, roll, financing, and liquidity effects. The rolling results are not the source for the adjusted-baseline attribution or SG Trend comparisons that follow.
+
+## Adjusted-baseline results and analysis
 
 We evaluate the baseline in six steps. First, we test whether past returns contain a usable momentum signal. Second, we ask whether that signal produces attractive portfolio-level performance after volatility scaling and plausible transaction costs. Third, we identify which markets and positions generate the returns. Fourth, we test whether common factors explain those returns. Fifth, we examine the risks created by the portfolio and test whether the diagonal risk model forecasts them accurately. Finally, we compare the strategy with SG Trend. This sequence separates signal quality, portfolio construction, return sources, factor attribution, risk measurement, and external validation.
 
