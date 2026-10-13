@@ -95,7 +95,9 @@ These tests establish that the signal has predictive content. The next question 
 
 We next evaluate the fully constructed 12-month TSMOM portfolio from January 1976 through December 2014. The always-long static futures portfolio provides a simple benchmark using the same eligible universe and instrument-level volatility scaling. This comparison asks whether changing position direction with the momentum signal adds value beyond passive exposure to the futures universe.
 
-The evaluation covers compounded growth, average return, realized volatility, Sharpe ratio, drawdowns, turnover, and net performance under several transaction-cost assumptions. Signal timing checks confirm that weights formed at month $t$ are applied only to returns at month $t+1$.
+Signal timing checks confirm that weights formed at month $t$ are applied only to returns at month $t+1$.
+
+#### General results
 
 | Metric | TSMOM baseline | Static benchmark |
 | --- | ---: | ---: |
@@ -107,13 +109,39 @@ The evaluation covers compounded growth, average return, realized volatility, Sh
 | Monthly hit rate | 64.1% | 60.0% |
 | Annual turnover | 7.24 | 0.41 |
 
-The baseline materially outperforms the static benchmark, with higher return, lower volatility, and a much smaller maximum drawdown. This suggests that the signal adds value beyond static futures exposure. Its main implementation weakness is turnover. At 10 bps per one-way weight change, CAGR declines to 9.85% and Sharpe to 0.90; at 25 bps, CAGR is 8.68% and Sharpe is 0.81. Performance remains favorable under the tested costs, but these generic assumptions exclude market-specific spreads, roll costs, financing, and liquidity effects.
 
-Average gross exposure is 3.13, with a maximum of 4.60. Average net exposure is +0.84 and ranges from -2.50 to +4.24. The strategy therefore uses substantial implicit leverage and has a long bias on average. Strong total performance alone does not reveal whether the result is diversified, so we next decompose it by market, asset class, direction, time, and market regime.
+- **CAGR:** the constant annual compounded return that connects the initial portfolio value to its ending value. It reflects the effect of compounding and volatility.
+- **Annualized mean return:** the average monthly return multiplied by 12.
+- **Annualized volatility:** the standard deviation of monthly returns multiplied by the square root of 12.
+- **Sharpe ratio, RF = 0:** annualized mean return divided by annualized volatility, assuming a zero risk-free rate.
+- **Maximum drawdown:** the largest peak-to-trough decline in compounded portfolio value.
+- **Monthly hit rate:** the percentage of months with a positive portfolio return.
+- **Annual turnover:** the average monthly sum of absolute changes in instrument weights, multiplied by 12.
+
+The baseline has a 10.64% CAGR and a 0.97 Sharpe ratio, compared with 5.91% and 0.47 for the static benchmark. It also has lower volatility and a much smaller maximum drawdown. This suggests that changing position direction with the momentum signal adds value beyond passive futures exposure.
+
+Average gross exposure, defined as the sum of absolute instrument weights, is 3.13 and reaches 4.60. Average net exposure, defined as the sum of signed weights, is +0.84 and ranges from -2.50 to +4.24. The strategy therefore uses substantial implicit leverage and has a long bias on average.
 
 ![Baseline cumulative return](outputs/baseline_performance_output/baseline_cumulative_return.png)
 
 ![Rolling baseline performance](outputs/baseline_performance_output/baseline_rolling_performance.png)
+
+#### Turnover and transaction-cost evaluation
+
+The baseline trades much more than the static benchmark: annual turnover is 7.24 versus 0.41. We apply costs of 5, 10, and 25 basis points to each one-way change in target weight to measure how this turnover affects performance.
+
+| Cost per one-way weight change | CAGR | Sharpe ratio | Annual return drag |
+| ---: | ---: | ---: | ---: |
+| 0 bps | 10.64% | 0.97 | 0.00% |
+| 5 bps | 10.24% | 0.93 | 0.36% |
+| 10 bps | 9.85% | 0.90 | 0.72% |
+| 25 bps | 8.68% | 0.81 | 1.81% |
+
+The strategy remains profitable and retains a Sharpe ratio above 0.8 under all tested cost assumptions. These estimates are illustrative because they do not include instrument-specific bid-ask spreads, futures roll costs, financing, liquidity effects, or market impact.
+
+![Baseline transaction-cost sensitivity](outputs/baseline_performance_output/baseline_transaction_cost_sensitivity.png)
+
+**Section summary:** The momentum signal produces strong historical performance relative to the static benchmark and remains profitable under the tested transaction costs, but high turnover, implicit leverage, and long bias are important implementation risks. We next examine whether the returns are broadly diversified across markets and position directions.
 
 ### Where do the returns come from?
 
