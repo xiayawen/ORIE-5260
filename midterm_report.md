@@ -36,25 +36,25 @@ The main strategy is the adjusted baseline implemented in `strategy_backtest_adj
 
 ### Methodology
 
-For instrument (i) at month (t), the signal is
+For instrument $i$ at month $t$, the signal is
 
-\[
+$$
 s_{i,t}=\operatorname{sign}\left(\sum_{k=0}^{11} r_{i,t-k}\right).
-\]
+$$
 
-Annualized volatility is estimated from all available returns through month (t), subject to at least 36 valid monthly observations:
+Annualized volatility is estimated from all available returns through month $t$, subject to at least 36 valid monthly observations:
 
-\[
+$$
 \hat\sigma_{i,t}=\operatorname{Std}(r_{i,1:t})\sqrt{12}.
-\]
+$$
 
 The preliminary instrument position is
 
-\[
+$$
 p_{i,t}=s_{i,t}\frac{0.40}{\hat\sigma_{i,t}},
-\]
+$$
 
-and the portfolio divides these positions equally across the eligible markets. Positions formed using information through month (t) earn returns in month (t+1). The strategy rebalances monthly.
+and the portfolio divides these positions equally across the eligible markets. Positions formed using information through month $t$ earn returns in month $t+1$. The strategy rebalances monthly.
 
 ### Main assumptions
 
@@ -165,7 +165,19 @@ The static benchmark shows whether momentum improves on passive futures exposure
 
 The baseline has higher return and Sharpe than SG Trend over the overlap, but it also experiences a deeper maximum drawdown. The two series have a correlation of 0.62. A raw-return regression estimates a beta of 0.54 and annualized alpha of 6.52% with a HAC t-statistic of 2.48. The common variation is consistent with shared trend exposure, while the remaining difference may reflect the baseline's instrument set, simple signal, risk scaling, omitted fees, and lack of portfolio-level risk targeting. SG Trend may use different markets, fees, risk targets, and index rules, so the comparison is descriptive rather than a claim of replication or superiority.
 
-We then test whether standard equity factors explain the baseline. In the joint six-factor regression, annualized baseline alpha is 7.20%, the HAC t-statistic is 2.27, and the model explains 28.0% of variance. Momentum is the clearest exposure, with a beta of 0.29 and HAC t-statistic of 5.17. These factors explain part of the return, but they are incomplete for a diversified futures strategy. The residual should therefore not automatically be interpreted as manager skill. A later analysis should include futures-relevant trend, carry, value, duration, USD, and commodity factors.
+We then test whether standard equity factors explain the baseline. The joint regression uses monthly excess baseline returns and all six factors together, with Newey–West HAC standard errors using three lags.
+
+| Joint six-factor term | Annualized alpha or beta | HAC t-statistic | p-value |
+| --- | ---: | ---: | ---: |
+| Alpha | 7.20% | 2.27 | 0.023 |
+| Mkt-RF | 0.004 | 0.05 | 0.964 |
+| SMB | -0.005 | -0.06 | 0.949 |
+| HML | -0.222 | -1.71 | 0.087 |
+| Mom | 0.286 | 5.17 | &lt;0.001 |
+| RMW | 0.184 | 1.76 | 0.078 |
+| CMA | 0.218 | 1.31 | 0.189 |
+
+The joint model explains 28.0% of baseline variance. Momentum is the only clearly significant positive factor exposure, while the market and size betas are close to zero. The positive joint-model alpha indicates that the six equity factors do not fully explain the strategy over 2000–2014. However, they are incomplete for a diversified futures strategy, so the residual should not automatically be interpreted as manager skill. A later analysis should include futures-relevant trend, carry, value, duration, USD, and commodity factors.
 
 Together, the benchmark and factor results support the central conclusion from the earlier sections: the baseline captures a meaningful trend effect, but its simplified risk model, implicit leverage, concentration, implementation assumptions, and incomplete factor controls leave clear room for improvement.
 
