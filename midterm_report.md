@@ -39,13 +39,13 @@ The main strategy is the adjusted baseline implemented in `strategy_backtest_adj
 For instrument $i$ at month $t$, the signal is
 
 $$
-s_{i,t}=\operatorname{sign}\left(\sum_{k=0}^{11} r_{i,t-k}\right).
+s_{i,t}=\mathrm{sign}\left(\sum_{k=0}^{11} r_{i,t-k}\right).
 $$
 
 Annualized volatility is estimated from all available returns through month $t$, subject to at least 36 valid monthly observations:
 
 $$
-\hat\sigma_{i,t}=\operatorname{Std}(r_{i,1:t})\sqrt{12}.
+\hat\sigma_{i,t}=\mathrm{Std}(r_{i,1:t})\sqrt{12}.
 $$
 
 The preliminary instrument position is
@@ -70,7 +70,7 @@ This construction avoids the original classroom backtest's full-sample volatilit
 
 ## Backtest results and analysis
 
-We evaluate the baseline in five steps. First, we test whether past returns contain a usable momentum signal. Second, we ask whether that signal produces attractive portfolio-level performance after volatility scaling and plausible transaction costs. Third, we identify which markets and positions generate the returns. Fourth, we examine the risks created by those positions and test whether the diagonal risk model forecasts them accurately. Finally, we compare the strategy with external benchmarks and common factors. This sequence separates signal quality, portfolio construction, return sources, risk measurement, and benchmark-relative value.
+We evaluate the baseline in six steps. First, we test whether past returns contain a usable momentum signal. Second, we ask whether that signal produces attractive portfolio-level performance after volatility scaling and plausible transaction costs. Third, we identify which markets and positions generate the returns. Fourth, we test whether common factors explain those returns. Fifth, we examine the risks created by the portfolio and test whether the diagonal risk model forecasts them accurately. Finally, we compare the strategy with SG Trend. This sequence separates signal quality, portfolio construction, return sources, factor attribution, risk measurement, and external validation.
 
 ### Is there evidence that the momentum signal predicts returns?
 
@@ -130,9 +130,27 @@ Return attribution tests whether the headline performance is broad or dependent 
 
 All four asset classes and both position directions contribute positively, which supports the economic breadth of the strategy. Returns are nevertheless concentrated in commodities and long positions. Lumber and gold are the largest individual contributors, while soybeans and orange juice detract most. The positive short-side contribution indicates that the strategy is doing more than capturing a general long-asset premium, although the long side remains dominant.
 
-The strategy remains profitable in the S&P 500 futures proxy regimes: annualized mean return is 10.26% in bear regimes and 11.13% in bull regimes. Bear-regime volatility is higher, at 12.60% versus 8.33% in bull regimes. Returns are also positive in every reported decade, although annualized mean return falls to 7.57% in 2010–2014. This stability is encouraging, but the concentration in commodities and long positions leads directly to the next question: how much risk is concentrated in the same sources, and does the current risk model measure it correctly?
+The strategy remains profitable in the S&P 500 futures proxy regimes: annualized mean return is 10.26% in bear regimes and 11.13% in bull regimes. Bear-regime volatility is higher, at 12.60% versus 8.33% in bull regimes. Returns are also positive in every reported decade, although annualized mean return falls to 7.57% in 2010–2014. This stability is encouraging. We next complement the direct market attribution with a factor regression to test whether familiar systematic exposures explain the portfolio's returns.
 
 ![Asset-class and direction return contribution](outputs/baseline_return_attribution_output/asset_class_and_direction_contribution.png)
+
+### Do common factors explain the returns?
+
+The market-level attribution shows where profits are earned, while factor attribution asks whether those profits can be explained by common return drivers. We regress monthly excess baseline returns jointly on Mkt-RF, SMB, HML, Mom, RMW, and CMA over the available January 2000–December 2014 sample. Newey–West HAC standard errors use three lags.
+
+| Joint six-factor term | Annualized alpha or beta | HAC t-statistic | p-value |
+| --- | ---: | ---: | ---: |
+| Alpha | 7.20% | 2.27 | 0.023 |
+| Mkt-RF | 0.004 | 0.05 | 0.964 |
+| SMB | -0.005 | -0.06 | 0.949 |
+| HML | -0.222 | -1.71 | 0.087 |
+| Mom | 0.286 | 5.17 | &lt;0.001 |
+| RMW | 0.184 | 1.76 | 0.078 |
+| CMA | 0.218 | 1.31 | 0.189 |
+
+The joint model explains 28.0% of baseline variance. Momentum is the only clearly significant positive factor exposure, while the market and size betas are close to zero. The positive joint-model alpha indicates that the six equity factors do not fully explain the strategy over 2000–2014.
+
+This result is consistent with the strategy's momentum design, but the factor set is incomplete for diversified futures. Residual return should therefore not automatically be interpreted as manager skill. A later analysis should include futures-relevant trend, carry, value, duration, USD, and commodity factors. Having examined both direct and factor-based return sources, we next determine whether the strategy's risk is diversified and forecast accurately.
 
 ### What risks does the strategy take, and does the model forecast them?
 
@@ -147,11 +165,11 @@ Risk attribution describes the model's internal view of risk; it does not show w
 
 The current risk model materially understates subsequent risk and has little linear forecasting power. At the primary 12-month horizon, realized volatility exceeds the prediction in nearly three quarters of observations and exceeds it by more than 25% in 50.4% of observations. The zero-covariance assumption is a likely source of underestimation because same-direction exposures can be correlated. This result provides the strongest direct case for the proposed covariance-aware enhancement and portfolio-level volatility targeting.
 
-Having assessed the strategy on its own terms, we finally ask whether it behaves like an established trend-following benchmark and whether conventional factors explain its returns.
+Having assessed the strategy's signal, returns, exposures, and risk model, we finally compare it with an external trend-following benchmark.
 
 ![Predicted and realized volatility](outputs/risk_model_validation_output/forecast_scatter.png)
 
-### How does the baseline compare with SG Trend and common factors?
+### How does the baseline compare with SG Trend?
 
 The static benchmark shows whether momentum improves on passive futures exposure over the full backtest. SG Trend provides a second, external comparison with a professional trend-following index. Because SG Trend data begin in January 2000, this comparison uses the common January 2000–December 2014 sample. We compare raw and volatility-matched returns, drawdowns, rolling statistics, correlation, and HAC regressions.
 
@@ -165,21 +183,7 @@ The static benchmark shows whether momentum improves on passive futures exposure
 
 The baseline has higher return and Sharpe than SG Trend over the overlap, but it also experiences a deeper maximum drawdown. The two series have a correlation of 0.62. A raw-return regression estimates a beta of 0.54 and annualized alpha of 6.52% with a HAC t-statistic of 2.48. The common variation is consistent with shared trend exposure, while the remaining difference may reflect the baseline's instrument set, simple signal, risk scaling, omitted fees, and lack of portfolio-level risk targeting. SG Trend may use different markets, fees, risk targets, and index rules, so the comparison is descriptive rather than a claim of replication or superiority.
 
-We then test whether standard equity factors explain the baseline. The joint regression uses monthly excess baseline returns and all six factors together, with Newey–West HAC standard errors using three lags.
-
-| Joint six-factor term | Annualized alpha or beta | HAC t-statistic | p-value |
-| --- | ---: | ---: | ---: |
-| Alpha | 7.20% | 2.27 | 0.023 |
-| Mkt-RF | 0.004 | 0.05 | 0.964 |
-| SMB | -0.005 | -0.06 | 0.949 |
-| HML | -0.222 | -1.71 | 0.087 |
-| Mom | 0.286 | 5.17 | &lt;0.001 |
-| RMW | 0.184 | 1.76 | 0.078 |
-| CMA | 0.218 | 1.31 | 0.189 |
-
-The joint model explains 28.0% of baseline variance. Momentum is the only clearly significant positive factor exposure, while the market and size betas are close to zero. The positive joint-model alpha indicates that the six equity factors do not fully explain the strategy over 2000–2014. However, they are incomplete for a diversified futures strategy, so the residual should not automatically be interpreted as manager skill. A later analysis should include futures-relevant trend, carry, value, duration, USD, and commodity factors.
-
-Together, the benchmark and factor results support the central conclusion from the earlier sections: the baseline captures a meaningful trend effect, but its simplified risk model, implicit leverage, concentration, implementation assumptions, and incomplete factor controls leave clear room for improvement.
+The SG Trend comparison supports the broader conclusion from the preceding analysis: the baseline captures a meaningful trend effect, but its simplified risk model, implicit leverage, concentration, implementation assumptions, and incomplete factor controls leave clear room for improvement.
 
 ![Baseline and SG Trend cumulative performance](outputs/strategy_analysis_output/sg_trend_cumulative.png)
 
