@@ -88,6 +88,26 @@ The rolling evaluation covers February 1970–December 2014 (539 months), wherea
 
 These figures use only the `rolling_tsmom` and `rolling_static` rows in `outputs/rolling_backtest_output/performance_summary.csv`. Average monthly traded notional for rolling TSMOM is 1.30. At 25 bps, annual arithmetic cost drag is 3.90%. Costs remain illustrative and omit contract-specific spreads, roll, financing, and liquidity effects. The rolling results are not the source for the adjusted-baseline attribution or SG Trend comparisons that follow.
 
+### Comparing correlation with each baseline’s static benchmark
+
+The adjusted baseline has a monthly gross-return correlation of **0.0799** with its own static benchmark over January 1976–December 2014. The rolling baseline has a correlation of **0.3846** with its own static benchmark over February 1970–December 2014. These are different pairs of portfolios, rather than two strategies compared against one common benchmark. Each static portfolio inherits its baseline’s risk estimate and eligibility rules.
+
+| Dimension | PPT / adjusted baseline | Rolling baseline |
+| --- | --- | --- |
+| Correlation with own static | 0.080 | 0.385 |
+| Signal aggregation | Sum of trailing 12 monthly returns | Compounded trailing 12-month return |
+| Instrument volatility | Expanding; at least 36 valid months | Trailing 12 months |
+| Evaluation sample | 1976–2014 | February 1970–2014 |
+| Eligibility | Valid expanding volatility; missing signals receive zero exposure | Valid signal and positive rolling volatility |
+
+**Possible explanation, not an established result:** recent-volatility scaling may produce shared exposure changes in rolling TSMOM and rolling static, increasing common return movement. Both adjusted portfolios also share their expanding-volatility scaling, however, so the existence of shared scaling alone does not explain the gap. The different volatility dynamics, signal directions, eligibility sets, and sample periods may all contribute. No controlled decomposition has yet measured their separate effects, and the direction or size of each contribution is not established.
+
+Correlation measures co-movement, not performance quality. The adjusted baseline’s lower correlation does not by itself prove superior diversification or crisis protection, and the rolling baseline’s higher correlation does not negate its positive return difference or higher gross Sharpe in its own sample. Implementation also matters: rolling annual traded notional is about 15.60 versus adjusted turnover of 7.24, and maximum gross exposure is approximately 29.75 versus 4.60.
+
+A controlled next test should use a common sample and aligned eligibility, change signal aggregation and volatility estimation separately, and report correlations alongside comparable exposure, costs, drawdowns, and risk-adjusted returns. SG Trend is a separate external comparator: the reported adjusted correlation of approximately 0.62 over 2000–2014 must not be substituted for either static-benchmark correlation.
+
+Sources: `outputs/strategy_backtest_adj_output/baseline_summary.csv`, `outputs/rolling_backtest_output/portfolio_correlations.csv`, baseline exposure and turnover outputs, and both baseline implementations.
+
 ## Adjusted-baseline results and analysis
 
 We evaluate the baseline in six steps. First, we test whether past returns contain a usable momentum signal. Second, we ask whether that signal produces attractive portfolio-level performance after volatility scaling and plausible transaction costs. Third, we identify which markets and positions generate the returns. Fourth, we test whether common factors explain those returns. Fifth, we examine the risks created by the portfolio and test whether the diagonal risk model forecasts them accurately. Finally, we compare the strategy with SG Trend. This sequence separates signal quality, portfolio construction, return sources, factor attribution, risk measurement, and external validation.
