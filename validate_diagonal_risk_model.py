@@ -17,7 +17,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from strategy_backtest_adj import build_baseline, read_asset_map, read_returns
+from baseline_output_loader import formation_date_risk_inputs, load_baseline_outputs
+from strategy_backtest_adj import read_asset_map, read_returns
 
 
 TRADING_MONTHS = 12
@@ -112,10 +113,11 @@ def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     returns = read_returns()
     asset_map = read_asset_map()
-    baseline, _ = build_baseline(returns, asset_map)
-    weights = baseline["weights"].reindex(returns.index).fillna(0.0)
-    volatility = baseline["vol"].reindex(returns.index)
-    evaluation_start = baseline["returns"].index.min()
+    baseline = load_baseline_outputs()
+    weights, volatility = formation_date_risk_inputs(baseline)
+    weights = weights.reindex(returns.index).fillna(0.0)
+    volatility = volatility.reindex(returns.index)
+    evaluation_start = baseline["monthly_returns"].index.min()
     class_lookup = asset_map.set_index("ID")["AssetClass"].to_dict()
 
     tables = {

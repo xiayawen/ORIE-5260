@@ -18,7 +18,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from strategy_backtest_adj import build_baseline, read_asset_map, read_returns
+from baseline_output_loader import load_baseline_outputs
+from strategy_backtest_adj import TSMOM_NAME, read_asset_map, read_returns
 
 
 TRADING_MONTHS = 12
@@ -98,57 +99,14 @@ def contribution_summary(series: pd.Series) -> dict[str, float]:
     }
 
 
-def drawdown_events(portfolio_returns: pd.Series) -> pd.DataFrame:
-    """Return completed and unrecovered peak-to-trough portfolio drawdowns."""
-    wealth = (1.0 + portfolio_returns.fillna(0.0)).cumprod()
-    events = []
-    peak_pos = 0
-    pos = 1
-    event_id = 0
-    while pos < len(wealth):
-        if wealth.iloc[pos] >= wealth.iloc[peak_pos]:
-            peak_pos = pos
-            pos += 1
-            continue
-        trough_pos = pos
-        scan = pos + 1
-        while scan < len(wealth) and wealth.iloc[scan] < wealth.iloc[peak_pos]:
-            if wealth.iloc[scan] < wealth.iloc[trough_pos]:
-                trough_pos = scan
-            scan += 1
-        recovery_pos = scan if scan < len(wealth) else None
-        event_id += 1
-        events.append(
-            {
-                "event_id": event_id,
-                "peak_date": wealth.index[peak_pos],
-                "trough_date": wealth.index[trough_pos],
-                "recovery_date": wealth.index[recovery_pos]
-                if recovery_pos is not None
-                else pd.NaT,
-                "maximum_drawdown": wealth.iloc[trough_pos] / wealth.iloc[peak_pos]
-                - 1.0,
-                "months_peak_to_trough": trough_pos - peak_pos,
-                "months_peak_to_recovery": recovery_pos - peak_pos
-                if recovery_pos is not None
-                else np.nan,
-            }
-        )
-        if recovery_pos is None:
-            break
-        peak_pos = recovery_pos
-        pos = recovery_pos + 1
-    return pd.DataFrame(events)
-
-
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     returns = read_returns()
     asset_map = read_asset_map()
-    baseline, _ = build_baseline(returns, asset_map)
+    baseline = load_baseline_outputs()
     contributions = baseline["instrument_returns"].copy()
-    execution_weights = baseline["execution_weights"].reindex(contributions.index)
-    portfolio = baseline["returns"].reindex(contributions.index)
+    execution_weights = baseline["executed_weights"].reindex(contributions.index)
+    portfolio = baseline["monthly_returns"][TSMOM_NAME].reindex(contributions.index)
     metadata = asset_map.set_index("ID")
     class_lookup = metadata["AssetClass"].to_dict()
 
@@ -208,7 +166,7 @@ def main() -> None:
         TRADING_MONTHS
     )
 
-    events = drawdown_events(portfolio)
+    events = baseline["drawdown_events"]
     largest_events = events.nsmallest(5, "maximum_drawdown")
     event_attribution_rows = []
     for event in largest_events.itertuples(index=False):
@@ -239,7 +197,6 @@ def main() -> None:
         }
     )
 
-    contributions.to_csv(OUT_DIR / "monthly_instrument_contributions.csv")
     class_monthly.to_csv(OUT_DIR / "monthly_asset_class_contributions.csv")
     direction_monthly.to_csv(OUT_DIR / "monthly_direction_contributions.csv")
     instrument_summary.to_csv(OUT_DIR / "contribution_by_instrument.csv", index=False)
@@ -255,7 +212,6 @@ def main() -> None:
     regime_instrument.to_csv(OUT_DIR / "contribution_by_regime_and_instrument.csv")
     regime_class.to_csv(OUT_DIR / "contribution_by_regime_and_asset_class.csv")
     regime_portfolio.to_csv(OUT_DIR / "portfolio_return_by_regime.csv")
-    events.to_csv(OUT_DIR / "drawdown_events.csv", index=False)
     event_attribution.to_csv(OUT_DIR / "drawdown_event_attribution.csv", index=False)
     reconciliation.to_csv(OUT_DIR / "contribution_reconciliation.csv")
 

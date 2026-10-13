@@ -1,10 +1,7 @@
-"""Generate asset-class statistics, SG Trend comparisons, and factor analysis.
+"""Generate asset-class statistics, benchmark comparisons, and factor analysis.
 
-The script uses the adjusted TSMOM baseline in ``strategy_backtest_adj.py``.
-It loads saved adjusted-strategy returns from
-``outputs/strategy_backtest_adj_output/monthly_returns.csv``
-when available. On a clean checkout, it rebuilds the baseline from the same source
-functions so the analysis can still be reproduced.
+Baseline and static-benchmark returns come from the standardized item 3 outputs.
+Saved adjusted-strategy results supply the separate enhancement experiments.
 """
 
 from __future__ import annotations
@@ -22,10 +19,10 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
+from baseline_output_loader import load_baseline_outputs
 from strategy_backtest_adj import (
     STATIC_NAME,
     TSMOM_NAME,
-    build_baseline,
     build_experiments,
     read_asset_map,
     read_returns,
@@ -84,21 +81,49 @@ def annualized_statistics(returns: pd.Series) -> dict[str, float]:
 
 
 def load_adjusted_strategy_returns(
-    returns: pd.DataFrame, asset_map: pd.DataFrame
+    returns: pd.DataFrame,
+    asset_map: pd.DataFrame,
+    standardized_baseline: pd.DataFrame,
 ) -> tuple[pd.DataFrame, str]:
-    """Load saved adjusted returns, rebuilding them if the saved file is absent."""
+    """Load experiments and replace shared series with standardized item 3 data."""
     if SAVED_STRATEGY_RETURNS.exists():
         saved = pd.read_csv(SAVED_STRATEGY_RETURNS, index_col=0, parse_dates=True)
         required = {TSMOM_NAME, STATIC_NAME}
         if required.issubset(saved.columns):
             columns = [name for name in STRATEGY_ORDER if name in saved.columns]
-            return saved[columns].sort_index(), str(SAVED_STRATEGY_RETURNS)
+            combined = saved[columns].sort_index()
+            source = str(SAVED_STRATEGY_RETURNS)
+        else:
+            combined = pd.DataFrame()
+            source = ""
+    else:
+        combined = pd.DataFrame()
+        source = ""
 
-    tsmom, static = build_baseline(returns, asset_map)
-    experiments = build_experiments(returns, asset_map)
-    results = [tsmom, *experiments, static]
-    rebuilt = pd.DataFrame({result["name"]: result["returns"] for result in results})
-    return rebuilt, "rebuilt from strategy_backtest_adj.py"
+    if combined.empty:
+        experiments = build_experiments(returns, asset_map)
+        combined = pd.DataFrame(
+            {result["name"]: result["returns"] for result in experiments}
+        )
+        source = "rebuilt experiments from strategy_backtest_adj.py"
+
+    for name in (TSMOM_NAME, STATIC_NAME):
+        if name in combined:
+            shared = pd.concat(
+                [
+                    combined[name].rename("existing"),
+                    standardized_baseline[name].rename("item3"),
+                ],
+                axis=1,
+            ).dropna()
+            error = (shared["existing"] - shared["item3"]).abs().max()
+            if error > 1e-8:
+                raise AssertionError(
+                    f"{name} differs from the standardized item 3 series by {error:.3g}."
+                )
+        combined[name] = standardized_baseline[name].reindex(combined.index)
+
+    return combined, f"{source}; baseline/static from item 3"
 
 
 def overall_strategy_statistics(strategy_returns: pd.DataFrame) -> pd.DataFrame:
@@ -673,8 +698,9 @@ def main() -> None:
 
     returns = read_returns()
     asset_map = read_asset_map()
+    baseline = load_baseline_outputs()
     strategy_returns, strategy_source = load_adjusted_strategy_returns(
-        returns, asset_map
+        returns, asset_map, baseline["monthly_returns"]
     )
 
     instrument_summary = instrument_statistics(returns, asset_map)
