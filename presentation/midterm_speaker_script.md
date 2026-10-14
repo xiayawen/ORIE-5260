@@ -9,8 +9,8 @@ Aligned with the concise 30-slide presentation. Five parts retain separate adjus
 | Part 1 — Motivation and EDA | 1–4 |
 | Part 2 — Course PPT adjusted baseline | 5–12 |
 | Part 3 — Rolling baseline | 13–19 |
-| Part 4 — Attribution risk and SG Trend | 20–25 |
-| Part 5 — Enhancements and conclusions | 26–30 |
+| Part 4 — Signal evidence and return sources | 20–25 |
+| Part 5 — Risk and external validation | 26–30 |
 
 ## Part 1 — Motivation and EDA
 
@@ -138,76 +138,77 @@ Aligned with the concise 30-slide presentation. Five parts retain separate adjus
 
 > The adjusted baseline has a correlation of 0.080 with its own static portfolio, while the rolling baseline has a correlation of 0.385 with its own static portfolio. These are different benchmarks and historical samples, not a comparison against one common return series. A possible explanation is that both rolling portfolios respond to the same recent-volatility estimates, which may create shared changes in exposure. However, both adjusted portfolios also share their risk scaling, so shared scaling alone does not establish the cause. Compounded versus summed signals, eligibility rules, and evaluation dates also differ. We have not isolated their contributions. Higher correlation means more common return movement, not automatically worse performance. Rolling has higher gross Sharpe in its sample but higher turnover and much larger peak exposure. The next step is a common-sample comparison that changes one component at a time.
 
-## Part 4 — Attribution risk and SG Trend
+## Part 4 — Signal evidence and return sources
 
 **Slides 20–25.**
 
-### Slide 20 — Asset classes and trading direction generate returns
+### Slide 20 — Autocorrelation: returns versus volatility
 
-**What to cover:** These are additive arithmetic return contributions, not CAGR components. Long positions provide 81.2 percent of the mean return and short positions 18.8 percent.
+**What to cover:** ACF(k) = Corr(xₜ, xₜ₋ₖ). Test k = 1–12 for returns, |returns|, and returns². Mean lag-1: raw 6.2%, absolute 18.4%.
 
-> These are additive arithmetic return contributions, not CAGR components. Long positions provide 81.2 percent of the mean return and short positions 18.8 percent.
+> This slide distinguishes return persistence from volatility persistence. Autocorrelation compares a series with its lagged values. Absolute and squared returns proxy volatility, not return direction. Diagnostics are computed per instrument and summarized by asset class and period. Stronger volatility persistence supports backward-looking risk estimates but does not by itself establish a tradable momentum signal.
 
-### Slide 21 — Return attribution by regime and decade
+### Slide 21 — Signal predictiveness across four horizons
 
-**What to cover:** Bear events are an internal futures proxy: peak-to-recovery events that subsequently reach a 20% drawdown. This retrospective classification is not a live trading signal or an official cash-index regime. The 1970s sample begins in 1976.
+**What to cover:** Spread = E[rₜ₊₁ | sₜ > 0] − E[rₜ₊₁ | sₜ < 0]. Hit rate = share of nonzero signals matching next-return direction. *HAC t uses monthly aggregated vol-scaled signed returns.
 
-> The strategy has positive returns in both internal bull and bear regimes and in every reported decade. Bear-regime volatility is higher, even though average returns remain positive. The 2010–2014 period is weaker than earlier periods. Our regimes use an S&P futures drawdown proxy identified retrospectively. They are descriptive categories, not a real-time trading signal or an official cash-index classification.
+> This is signal predictiveness, not the portfolio performance table in Part 2. Signals are formed before next-month returns. A correct negative signal means a subsequent negative return. Statistical inference uses monthly aggregated signed returns with HAC errors to avoid treating correlated markets within a month as independent. These samples and eligibility rules differ from the full baseline portfolio.
 
-### Slide 22 — Six-factor regression: significant momentum exposure
+### Slide 22 — Signal stability by class and period
 
-**What to cover:** Monthly excess-return regression with Newey–West HAC standard errors, three lags. Future analysis should include carry, trend, duration, USD, and other futures-relevant factors.
+**What to cover:** Instrument-level diagnostics are aggregated by class and period. Similar hit rates can coexist with smaller economic return spreads.
 
-> Over 2000 through 2014, the joint six-factor regression estimates annualized alpha of 7.20 percent and explains 28 percent of variance. Momentum has the clearest significant positive exposure, while market and size betas are close to zero. This is consistent with the strategy’s design. However, equity factors are incomplete controls for diversified futures, so residual alpha should not automatically be interpreted as manager skill.
+> All classes have positive twelve-month return spreads. Across periods the directional hit rate is comparatively stable while the economic spread becomes much smaller in 2010 through 2014. Therefore, hit rate alone is insufficient. Unequal instrument histories change the composition of period summaries, so these descriptive comparisons do not isolate a time effect.
 
-### Slide 23 — Many markets, concentrated asset-class risk
+### Slide 23 — Rolling performance and drawdown recovery
 
-**What to cover:** Risk shares here are internal diagonal-model w²σ² contributions. They omit covariance and are not a complete attribution of actual portfolio risk.
+**What to cover:** Drawdown = wealth / running peak − 1. Recovery is the first return to that prior peak. Rolling metrics use a moving historical window; they differ from rolling volatility used to form weights.
 
-> We now move from where returns come from to where risk comes from. Under the diagonal model, commodities account for 62.7 percent of average predicted variance. The effective number of instrument risk positions is 39.6, but the effective number of asset-class positions is only 2.35. The portfolio is broad across contracts but concentrated across asset classes. These shares describe the model’s internal view and omit covariance.
+> This adds stability and recovery information without repeating headline CAGR and Sharpe. The chart contains rolling return, volatility, and risk-adjusted performance. The largest adjusted drawdown took five months to reach its trough and 58 months from its peak to recover. A good full-sample Sharpe does not imply a short recovery period.
 
-### Slide 24 — The diagonal model understates future risk
+### Slide 24 — Return attribution: sources and drawdown drivers
 
-**What to cover:** Future fixed-weight volatility differs from the 11.15% volatility of the monthly rebalanced strategy. Overlapping forecast windows are not independent observations.
+**What to cover:** Monthly contribution cᵢ,ₜ = executed weight × market return. Arithmetic contributions add to portfolio returns; event sums do not decompose compounded MaxDD exactly.
 
-> To validate the risk model, we freeze formation-date weights and compare predicted volatility with realized volatility over the following 12 months. Average predicted volatility is 6.82 percent, while realized volatility is 9.78 percent. Realized risk exceeds the forecast in 74.8 percent of observations. The three-month check also shows underestimation. This isolates risk forecasting from later trading decisions.
+> Return attribution answers where profits and losses came from. The largest drawdown episode has notable negative arithmetic contributions from Australian dollar, copper, and Canadian dollar. These event contributions are sums over the episode rather than a geometrically linked drawdown decomposition. Do not equate return share with risk share.
 
-### Slide 25 — SG Trend: shared trend exposure, different drawdowns
+### Slide 25 — Market regimes: definition and attribution
 
-**What to cover:** SG Trend differs in markets, fees, risk targets, and rules. This comparison is descriptive, not evidence of exact replication or superiority.
+**What to cover:**  Classification:  compound SP futures returns into proxy wealth. If a peak-to-recovery episode reaches a drawdown of at least 20%, label months after the peak through recovery as Bear. If unrecovered, label through sample end. All remaining observed months are Bull.
 
-> The SG Trend comparison uses the common 2000–2014 sample. Our baseline has higher return and Sharpe, but also a deeper maximum drawdown: about 26 percent versus 18 percent. Correlation is 0.62, consistent with shared trend exposure. Differences in markets, fees, signals, and risk targets mean this is a descriptive comparison, not evidence that we exactly replicate or dominate a professional index.
+> The 20-percent threshold identifies the whole episode retrospectively, not just months after the threshold is crossed. The peak month is excluded from Bear and the recovery month is included. Recovery means proxy wealth reaches or exceeds its previous peak. Thus early months are classified using later outcomes. The result describes historical market conditions and must not be claimed as a live regime signal. The 1970s strategy sample begins in 1976.
 
-## Part 5 — Enhancements and conclusions
+## Part 5 — Risk and external validation
 
 **Slides 26–30.**
 
-### Slide 26 — Four completed PPT / adjusted experiments
+### Slide 26 — Risk concentration under the diagonal model
 
-**What to cover:** E2 equalizes class allocation without solving covariance-aware equal risk contribution. It does not guarantee 25% of actual risk per class.
+**What to cover:** Diagonal variance = Σ wᵢ²σᵢ², omitting all cross-market covariance terms. Risk share qᵢ = wᵢ²σᵢ² / total; effective positions = 1 / Σqᵢ².
 
-> We completed four experiments around the adjusted baseline. E1 replaces expanding volatility with EWMA using a six-month half-life. E2 allocates equally across asset classes and then within each class. E3 averages the one-, three-, six-, and 12-month direction signals. E4 combines all three changes. E2 is a class-allocation rule, not a covariance-aware solution guaranteeing equal realized risk.
+> This is the internal risk model, not a complete estimate of realized covariance-aware risk. Equal instrument allocation does not create equal class risk. Correlated same-direction positions can increase true portfolio risk through omitted covariance terms. The current validation diagnoses the model; it does not yet isolate covariance from every other forecast error source.
 
-### Slide 27 — Experimental improvements do not simply add up
+### Slide 27 — Validate risk forecasts using fixed weights
 
-**What to cover:** Matched volatility uses full-sample scaling to the baseline 11.15%, so it is retrospective. Experiment results are gross. Baseline transaction-cost results cannot be applied directly to experiments.
+**What to cover:** Save formation-month prediction. Freeze those weights and measure annualized volatility over the next H months. Error = realized − predicted; bias = mean error. Exceedance = realized > predicted.
 
-> E1 improves gross Sharpe to 1.12, but increases turnover. E3 has a Sharpe close to the baseline and reduces drawdowns, also with higher turnover. E2 and E4 have lower Sharpe than the baseline, so the benefits do not simply add up. Matched-volatility CAGR and drawdown use retrospective full-sample scaling. We still need separate cost and out-of-sample tests before selecting an enhancement.
+> Fixed weights isolate risk forecasting from later signal and trading changes. The future realized volatility is different from the volatility of the monthly rebalanced strategy. Error files include absolute and squared errors for MAE and RMSE calculations. Overlapping horizons create dependent observations. Future covariance and targeting models must be assessed with the same validation design.
 
-### Slide 28 — Enhancement paths at comparable volatility
+### Slide 28 — Risk validation in high-volatility periods
 
-**What to cover:** Use the chart to compare paths, not only ending wealth. E1 has the strongest gross Sharpe. E3 has similar Sharpe and smaller drawdown but greater turnover. E2 and E4 do not preserve every individual benefit. Matching uses realized full-sample volatility and is not a tradable dynamic target.
+**What to cover:** High-volatility label: future fixed-weight realized vol at or above its 80th-percentile cutoff, separately for each horizon. This is an ex-post evaluation label, not a forecast available at formation.
 
-> Use the chart to compare paths, not only ending wealth. E1 has the strongest gross Sharpe. E3 has similar Sharpe and smaller drawdown but greater turnover. E2 and E4 do not preserve every individual benefit. Matching uses realized full-sample volatility and is not a tradable dynamic target.
+> The high-volatility test demonstrates where underestimation is especially severe. The reported twelve-month high subset has 61 observations after summary filtering. We must not present the ex-post label as a tradable regime predictor. Bias is mean signed error and RMSE is the square root of mean squared error. This analysis strengthens the case for risk-model improvements.
 
-### Slide 29 — Findings: credible signal, incomplete risk model
+### Slide 29 — SG Trend: external benchmark and active risk
 
-**What to cover:** Highlight the evidence shown.
+**What to cover:** Tracking error = Std(TSMOM − SG) × √12. Information ratio = annual mean difference / tracking error. Alpha is a regression intercept; beta measures benchmark exposure.
 
-> Our main finding is that momentum has predictive information and produces attractive historical portfolio results. Returns are broad, but commodities and long positions dominate. The risk model is the clearest weakness because it understates future volatility and has limited forecasting power. Costs, leverage, and data assumptions matter. Enhancement results are promising in places, but they are not uniformly better.
+> SG Trend is an external trend index, not our internal always-long benchmark. Use the common 180-month sample. The adjusted baseline has higher return and Sharpe but a deeper drawdown. Tracking error measures variability of active returns, not volatility forecast error. Benchmark outputs also contain cumulative and rolling comparisons, but this concise page summarizes their main metrics rather than reproducing every chart.
 
-### Slide 30 — Next steps and reproducibility
+### Slide 30 — Enhancements and next evaluation
 
-**What to cover:** Run baseline_performance_analysis.py before downstream adjusted attribution, validation, and benchmark analysis. E1–E4 are completed experiments; full covariance models, portfolio targeting, and walk-forward enhancements remain planned work. The central priority is improving risk measurement and implementation rather than selecting by full-sample Sharpe.
+**What to cover:** Matched-vol results use full-sample scaling to baseline volatility, for retrospective comparison. E2 equalizes class allocation, not covariance-aware risk contributions.
 
-> Run baseline_performance_analysis.py before downstream adjusted attribution, validation, and benchmark analysis. E1–E4 are completed experiments; full covariance models, portfolio targeting, and walk-forward enhancements remain planned work. The central priority is improving risk measurement and implementation rather than selecting by full-sample Sharpe.
+> These are completed gross experiments around the adjusted baseline. E1 improves Sharpe, while E3 reduces matched-volatility drawdowns with higher turnover. Combined changes do not automatically preserve every benefit. Full covariance, portfolio targeting, and walk-forward implementation remain future work. End with the core conclusion: useful momentum evidence, but risk modeling and implementation need improvement.
+
