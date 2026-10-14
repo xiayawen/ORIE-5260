@@ -10,8 +10,6 @@ This project studies time-series momentum (TSMOM) across a diversified futures u
 
 The repository includes both baseline backtests, the adjusted-baseline analysis pipeline, and four completed enhancement experiments (E1–E4). The next stage is covariance-aware risk estimation, portfolio-level volatility targeting, and walk-forward evaluation.
 
-For a concise discussion of the methodology, evidence, findings, and proposed enhancements, see [`midterm_report.md`](midterm_report.md).
-
 ## Data
 
 - `MonthlyReturns.csv`: monthly returns for 58 futures markets from January 1969 to December 2014.
