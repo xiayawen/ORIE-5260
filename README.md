@@ -132,6 +132,35 @@ Tests whether the diagonal model predicts subsequent portfolio risk. Formation-d
 
 Results are written to `outputs/risk_model_validation_output/`.
 
+#### `covariance_risk_validation.py`
+
+Compares the existing diagonal forecast with expanding covariance, six-month
+half-life EWMA covariance, and fixed 50% shrinkage toward the expanding diagonal.
+Uses unchanged adjusted-baseline weights and identical evaluation dates within
+each 3- or 12-month horizon. Pairwise missing-history estimates require 36
+overlapping months for correlations, with zero-correlation fallback and PSD
+correlation repair. No portfolio volatility targeting is applied. EWMA changes
+both marginal variances and correlations. Results are descriptive, with overlapping
+forward windows; parameters are fixed rather than optimized on these results.
+
+Run after `baseline_performance_analysis.py`. Forecasts, overall and decade-level
+accuracy, matrix diagnostics, a comparison plot, and methodology are written to
+`outputs/covariance_risk_validation_output/`.
+
+#### `portfolio_volatility_targeting.py`
+
+Compares unchanged baseline weights with portfolio targeting under all four risk
+models. Fixed parameters are a 10% annual portfolio volatility target, 4x gross
+exposure cap, and 2x maximum multiplier on baseline weights. Formation-date risk
+forecasts scale next-month positions. Reports 0/5/10/25 bps costs, rolling realized
+risk, exposure, binding limits, executed weights, and descriptive subperiods.
+No performance-based parameter fitting or untouched holdout claim is made.
+
+Run after `baseline_performance_analysis.py`; covariance forecasts are recomputed
+using full formation-date history. Results go to
+`outputs/portfolio_volatility_targeting_output/`. Synthetic timing and limit
+checks: `python -m unittest test_portfolio_volatility_targeting.py`.
+
 ### 7. Compare the baseline with benchmarks and factors
 
 #### `generate_strategy_analysis.py`
@@ -157,6 +186,8 @@ python baseline_performance_analysis.py
 python baseline_return_attribution.py
 python baseline_risk_analysis.py
 python validate_diagonal_risk_model.py
+python covariance_risk_validation.py
+python portfolio_volatility_targeting.py
 python generate_strategy_analysis.py
 ```
 
