@@ -156,6 +156,11 @@ forecasts scale next-month positions. Reports 0/5/10/25 bps costs, rolling reali
 risk, exposure, binding limits, executed weights, and descriptive subperiods.
 No performance-based parameter fitting or untouched holdout claim is made.
 
+Includes a cap-only control that proportionally reduces baseline positions above
+4x gross exposure without forecasting risk or amplifying positions. The cap
+ablation report and differences table distinguish the cap effect from additional
+dynamic targeting and compare risk models under common targeting rules.
+
 Run after `baseline_performance_analysis.py`; covariance forecasts are recomputed
 using full formation-date history. Results go to
 `outputs/portfolio_volatility_targeting_output/`. Synthetic timing and limit

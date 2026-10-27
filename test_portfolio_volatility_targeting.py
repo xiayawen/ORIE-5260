@@ -4,10 +4,23 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from portfolio_volatility_targeting import target_weights, simulate, TARGET, GROSS_CAP, SCALE_CAP
+from portfolio_volatility_targeting import target_weights, cap_only_weights, simulate, TARGET, GROSS_CAP, SCALE_CAP
 
 
 class TargetingTests(unittest.TestCase):
+    def test_cap_only_preserves_uncapped_positions_and_direction(self):
+        weights = pd.DataFrame({"a": [1., 2., 3., 0.], "b": [-1., -2., -3., 0.]})
+        capped, detail = cap_only_weights(weights)
+        pd.testing.assert_frame_equal(capped.iloc[:2], weights.iloc[:2])
+        np.testing.assert_allclose(capped.iloc[2], [2, -2])
+        np.testing.assert_allclose(capped.iloc[3], [0, 0])
+        self.assertEqual(detail.gross_cap_binding.tolist(), [False, False, True, False])
+        gross, _, _ = simulate(pd.DataFrame(.1, index=weights.index, columns=weights.columns), capped)
+        np.testing.assert_allclose(gross, 0)
+        changed = weights.copy()
+        changed.iloc[-1] = [100, -50]
+        pd.testing.assert_frame_equal(cap_only_weights(changed)[0].iloc[:-1], capped.iloc[:-1])
+
     def test_target_and_limits(self):
         index = pd.date_range("2000-01-31", periods=4, freq="ME")
         weights = pd.DataFrame({"a": [1., 1., 3., 1.], "b": [-1., -1., -3., -1.]}, index=index)

@@ -1,6 +1,6 @@
 # Portfolio volatility targeting
 
-Fixed parameters: 10% annual portfolio volatility target, 4x gross exposure cap, 2x maximum multiplier on baseline weights. No tuning to performance. All four models scale the same baseline positions; original baseline is also reported. Formation-month forecasts use history through that month; weights execute one month later. Full pre-evaluation history is used for prior weights and initial evaluation turnover.
+Fixed parameters: 10% annual portfolio volatility target, 4x gross exposure cap, 2x maximum multiplier on baseline weights. No tuning to performance. All four models scale the same baseline positions; original baseline and a cap-only control are also reported. Cap-only applies min(1, 4/gross exposure), with no volatility targeting or position amplification. Formation-month forecasts use history through that month; weights execute one month later. Full pre-evaluation history is used for prior weights and initial evaluation turnover.
 
 Covariance estimation follows covariance_risk_validation.py (expanding pairwise covariance, six-month EWMA, fixed 50% shrinkage, 36-month overlap, PSD repair). Invalid forecasts cause zero exposure. Caps can prevent reaching target. Realized risk may exceed target even when forecast risk does not.
 

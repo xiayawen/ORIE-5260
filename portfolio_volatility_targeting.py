@@ -21,6 +21,17 @@ SCALE_CAP = 2.0
 COST_BPS = (0, 5, 10, 25)
 
 
+def cap_only_weights(weights):
+    """Reduce gross exposure above 4x; never enlarge baseline positions."""
+    gross = weights.abs().sum(axis=1)
+    scale = (GROSS_CAP / gross.replace(0, np.nan)).clip(upper=1).fillna(1)
+    return weights.mul(scale, axis=0), pd.DataFrame({
+        "applied_scale": scale,
+        "gross_exposure": gross * scale,
+        "gross_cap_binding": gross > GROSS_CAP,
+    })
+
+
 def target_weights(weights, forecast):
     """Scale formation-date weights using only the formation-date forecast."""
     gross = weights.abs().sum(axis=1)
@@ -69,7 +80,8 @@ def main():
     baseline, _ = build_baseline(returns, read_asset_map())
     formed = baseline["weights"]
     forecasts, _ = predict(returns, formed, expanding_volatility(returns))
-    strategies = {"baseline": formed}
+    cap_weights, cap_detail = cap_only_weights(formed)
+    strategies = {"baseline": formed, "cap_only": cap_weights}
     diagnostics = []
     for model in MODELS:
         targeted, detail = target_weights(formed, forecasts[model].reindex(formed.index))
@@ -92,7 +104,10 @@ def main():
         monthly[f"{name}_turnover"] = traded
         exposure = executed.loc[EVAL_START:].abs().sum(axis=1)
         row = {"strategy": name, "average_gross_exposure": exposure.mean(), "maximum_gross_exposure": exposure.max()}
-        if name != "baseline":
+        if name == "cap_only":
+            aligned = cap_detail.reindex(returns.index).shift(1).loc[EVAL_START:]
+            row["gross_cap_binding_frequency"] = aligned.gross_cap_binding.astype(float).mean()
+        elif name != "baseline":
             detail = next(d for d in diagnostics if d.model.iloc[0] == name).set_index("Date")
             # Formation diagnostics are lagged to align with evaluated execution months.
             aligned = detail.reindex(returns.index).shift(1).loc[EVAL_START:]
@@ -110,6 +125,38 @@ def main():
     pd.DataFrame(period_rows).to_csv(OUT / "performance_by_period.csv", index=False)
     pd.DataFrame(exposure_rows).to_csv(OUT / "exposure_and_limits.csv", index=False)
     pd.DataFrame(monthly).rename_axis("Date").to_csv(OUT / "monthly_returns_and_turnover.csv")
+    cap_detail.rename_axis("Date").to_csv(OUT / "cap_only_formation_diagnostics.csv")
+    # Differences describe successive comparisons; nonlinear metrics such as
+    # drawdown do not provide an additive causal decomposition.
+    differences = []
+    metrics = ("cagr", "annual_volatility", "sharpe_0rf", "max_drawdown", "annual_turnover")
+    comparisons = [("baseline", "cap_only"), ("cap_only", "diagonal")]
+    comparisons += [("cap_only", model) for model in MODELS if model != "diagonal"]
+    comparisons += [("diagonal", model) for model in MODELS if model != "diagonal"]
+    for bps in COST_BPS:
+        selected = summary[summary.cost_bps == bps].set_index("strategy")
+        for reference, candidate in comparisons:
+            differences.append({"cost_bps": bps, "reference": reference, "candidate": candidate,
+                                **{f"delta_{metric}": selected.loc[candidate, metric] - selected.loc[reference, metric]
+                                   for metric in metrics}})
+    pd.DataFrame(differences).to_csv(OUT / "ablation_differences.csv", index=False)
+    lines = ["# Gross exposure cap ablation", "",
+             "Same 1976–2014 sample, original signals and one-month execution lag. Cap-only scales all baseline positions proportionally only when gross exposure exceeds 4x; otherwise positions are unchanged. It uses no risk forecast and never increases baseline exposure.", "",
+             "## Results at 10 bps per one-way target-weight change", "",
+             "| Strategy | CAGR | Annual volatility | Sharpe (RF=0) | Maximum drawdown | Annual turnover |",
+             "|---|---:|---:|---:|---:|---:|"]
+    for row in summary[summary.cost_bps == 10].itertuples():
+        lines.append(f"| {row.strategy} | {row.cagr:.2%} | {row.annual_volatility:.2%} | {row.sharpe_0rf:.3f} | {row.max_drawdown:.2%} | {row.annual_turnover:.2f} |")
+    cap_frequency = next(row for row in exposure_rows if row["strategy"] == "cap_only")["gross_cap_binding_frequency"]
+    selected = summary[summary.cost_bps == 10].set_index("strategy")
+    baseline_dd = selected.loc["baseline", "max_drawdown"]
+    cap_dd = selected.loc["cap_only", "max_drawdown"]
+    ewma_dd = selected.loc["ewma_covariance", "max_drawdown"]
+    lines += ["", f"Cap-only reduces exposure in {cap_frequency:.1%} of evaluation months.", "",
+              f"At 10 bps costs, maximum drawdown is {baseline_dd:.2%} for baseline, {cap_dd:.2%} for cap-only, and {ewma_dd:.2%} for EWMA targeting. The cap improves drawdown by {(cap_dd-baseline_dd)*100:.2f} percentage points; EWMA targeting improves it by a further {(ewma_dd-cap_dd)*100:.2f} percentage points relative to cap-only. The gross cap alone therefore does not reproduce the full EWMA result in this historical sample.", "",
+              "Baseline vs cap-only isolates the 4x cap intervention. Cap-only vs full targeting measures the additional effect of forecast-based scaling and its multiplier limit under the same gross cap. Diagonal vs covariance targeting compares risk models under identical targeting rules; EWMA changes variances as well as correlations.", "",
+              "Differences are descriptive strategy comparisons, not an additive attribution of drawdown or proof of a causal covariance mechanism. Risk levels differ, parameters were not optimized here, and the historical sample is not an untouched holdout. Costs and missing-return assumptions match the main methodology."]
+    (OUT / "cap_ablation_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     fig, axes = plt.subplots(2, 1, figsize=(12, 9), sharex=True)
     for name in strategies:
         r = monthly[f"{name}_net_10bps"]
@@ -130,7 +177,8 @@ def main():
         "# Portfolio volatility targeting\n\n"
         "Fixed parameters: 10% annual portfolio volatility target, 4x gross exposure cap, "
         "2x maximum multiplier on baseline weights. No tuning to performance. "
-        "All four models scale the same baseline positions; original baseline is also reported. "
+        "All four models scale the same baseline positions; original baseline and a cap-only control are also reported. "
+        "Cap-only applies min(1, 4/gross exposure), with no volatility targeting or position amplification. "
         "Formation-month forecasts use history through that month; weights execute one month later. "
         "Full pre-evaluation history is used for prior weights and initial evaluation turnover.\n\n"
         "Covariance estimation follows covariance_risk_validation.py (expanding pairwise covariance, "
