@@ -193,8 +193,13 @@ python baseline_risk_analysis.py
 python validate_diagonal_risk_model.py
 python covariance_risk_validation.py
 python portfolio_volatility_targeting.py
+python rebalance_frequency_backtest.py
 python generate_strategy_analysis.py
 ```
+
+The [rebalance frequency experiment](outputs/rebalance_frequency_output/frequency_report.md)
+compares monthly, weekly and daily schedules for the adjusted baseline using
+the same daily-close data, position-sizing rules and cost scenarios.
 
 `rolling_backtest.py` can run separately and does not require the adjusted performance outputs.
 
