@@ -2,188 +2,287 @@
 
 ## Project overview
 
-This project studies time-series momentum (TSMOM) across a diversified futures universe. The work has three stages:
+This project studies time-series momentum (TSMOM) across a diversified futures universe. The repository has two parts:
 
-1. **Understand and validate the data** through exploratory data analysis.
-2. **Construct two baseline versions**: the course PPT / adjusted baseline (`strategy_backtest_adj.py`) and the rolling baseline (`rolling_backtest.py`).
-3. **Evaluate the strategies** through performance and costs, then use the adjusted baseline for the standardized signal, attribution, risk-validation, and SG Trend analysis pipeline.
+1. **Part 1 — EDA and baseline-strategy analysis:** all work completed before October 27, 2026. This part validates the data, constructs two baseline strategies, and analyzes their signals, performance, return sources, risks, and benchmark relationships.
+2. **Part 2 — Strategy enhancements:** work beginning October 27, 2026. This part adds covariance-aware risk forecasts, portfolio volatility targeting, exposure controls, a fuller transaction-cost model, alternative rebalance frequencies, and an economic-trend extension.
 
-The repository includes both baseline backtests, the adjusted-baseline analysis pipeline, and four completed enhancement experiments (E1–E4). The next stage is covariance-aware risk estimation, portfolio-level volatility targeting, and walk-forward evaluation.
+The adjusted baseline is the common reference strategy for most attribution, risk-validation, and enhancement experiments. The rolling baseline has its own performance, cost, correlation, and regression analysis.
 
 ## Data
 
 - `MonthlyReturns.csv`: monthly returns for 58 futures markets from January 1969 to December 2014.
 - `AssetMapCsv.csv`: instrument names, currencies, and asset-class classifications.
-- `FuturesUnderlyingData/`: daily price, volume, and open-interest files used for data validation and monthly-return reconstruction.
+- `FuturesUnderlyingData/`: daily price, volume, and open-interest files used for data validation, liquidity diagnostics, and daily-frequency experiments.
 - `Lecture3_livedata.xlsx`: SG Trend, GSCI, risk-free rate, and Mkt-RF, SMB, HML, Mom, RMW, and CMA factor returns from January 2000 to December 2014.
+- `macro_data/` (not committed): FRED-style CSV inputs expected by the economic-trend scripts, including `INDPRO.csv`, `CPIAUCSL.csv`, and `GS2.csv`; `BAA10Y.csv` is optional. The committed one-byte `macrodata` file is not used by the code.
+- `FuturesUnderlyingData_FullSample/.../*_RAD.CSV` (not committed): uploaded continuous-futures closes used for the January 2015–May 2025 extension. The scripts accept another location through `--data-dir`.
 
-The futures universe contains commodities, equity indices, fixed income, and FX. The panel is unbalanced because markets begin at different dates.
+The futures universe contains commodities, equity indices, fixed income, and FX. The return panel is unbalanced because instruments begin at different dates.
 
-## Project workflow and scripts
+# Part 1 — EDA and baseline-strategy analysis
 
-### 1. Explore and validate the data
+Part 1 contains the project through the final commit before October 27. Its purpose is to establish reliable data, define the baseline strategies, and understand their historical behavior before changing the models.
 
-#### `analysis_eda.py`
+## 1. Data exploration and validation
+
+### `analysis_eda.py`
 
 Performs the initial data review:
 
-- Summarizes return distributions and coverage by instrument and asset class.
+- Summarizes coverage and return distributions by instrument and asset class.
 - Measures missingness and flags unusually large monthly returns.
 - Calculates the cross-market correlation matrix.
-- Reconstructs monthly returns from daily closing prices and compares them with the supplied monthly file.
+- Reconstructs monthly returns from daily closing prices and compares them with `MonthlyReturns.csv`.
 
-Outliers are flagged for review rather than automatically removed. EDA tables, figures, and a short report are written to `outputs/eda_output/`.
+Outliers are flagged for review rather than automatically removed. Results are written to `outputs/eda_output/`.
 
-### 2. Construct the baseline strategies
+## 2. Baseline strategies
 
-**The two project baselines are `strategy_backtest_adj.py` and `rolling_backtest.py`.**
+The project has two baseline specifications.
 
-| Design | Course PPT / adjusted baseline | Rolling baseline |
+| Design | Adjusted/course baseline | Rolling baseline |
 | --- | --- | --- |
 | Script | `strategy_backtest_adj.py` | `rolling_backtest.py` |
-| Signal | Sign of summed trailing 12 monthly returns | Sign of compounded trailing 12-month returns |
-| Instrument volatility | Expanding history; at least 36 valid months | Trailing 12 months; valid consecutive window |
-| Main evaluation | January 1976–December 2014 | February 1970–December 2014 |
+| Signal | Sign of the sum of the previous 12 monthly returns | Sign of the compounded trailing 12-month return |
+| Instrument volatility | Expanding history with at least 36 valid months | Trailing 12-month window |
+| Main sample | January 1976–December 2014 | February 1970–December 2014 |
 | Gross TSMOM CAGR / Sharpe | 10.64% / 0.97 | 19.12% / 1.06 |
-| Correlation with own static | 0.080 | 0.385 |
+| Correlation with its own static benchmark | 0.080 | 0.385 |
 
-Both use historical inputs at formation, execute weights in the following month, compound portfolio wealth, and use annualized arithmetic mean divided by annualized volatility for zero-RF Sharpe. Both have their own always-long static benchmark. Signal aggregation, volatility estimation, eligibility, and evaluation samples differ; these figures do not isolate the effect of a single design choice. SG Trend is a separate external comparator.
+Both strategies use information available at formation and execute weights in the following month. Their signal definitions, volatility estimates, eligibility rules, and evaluation samples differ, so their results do not isolate a single design choice.
 
-#### `strategy_backtest_adj.py`
+### `strategy_backtest_adj.py`
 
-Implements baseline A, following the course PPT approach:
+Implements the course-style adjusted baseline:
 
-- **Signal:** sign of the sum of the previous 12 monthly returns.
-- **Instrument risk estimate:** expanding annualized volatility with at least 36 valid monthly observations.
-- **Position scaling:** signal multiplied by `40% / instrument volatility`.
-- **Portfolio allocation:** equal allocation across eligible instruments.
-- **Timing:** information through month `t` forms weights that earn returns in month `t+1`.
-- **Rebalancing:** monthly.
+- Signal: sign of summed trailing returns.
+- Risk estimate: expanding annualized instrument volatility.
+- Position size: signal multiplied by `40% / instrument volatility`.
+- Allocation: equal across eligible instruments.
+- Rebalancing: monthly with a one-month execution lag.
 
-The 40% value is an instrument-level scaling parameter before diversification. It is not a portfolio volatility target. The baseline risk model is diagonal and assumes zero covariance between instruments.
+The 40% parameter scales individual instruments before diversification; it is not a portfolio volatility target. The baseline risk model is diagonal and assumes zero covariance between instruments.
 
-This script also runs the existing strategy experiments:
+The script also evaluates the 1-, 3-, 6-, and 12-month lookbacks and the original E1–E4 variants involving EWMA volatility, equal asset-class allocation, multiple lookbacks, and their combination. Results are written to `outputs/strategy_backtest_adj_output/`.
 
-- 1-, 3-, 6-, and 12-month momentum lookbacks.
-- EWMA volatility with a six-month half-life.
-- Equal allocation across valid asset classes, with equal allocation within each class. This does not solve covariance-aware equal risk contributions.
-- A signal averaging multiple momentum horizons.
-- A combined EWMA, asset-class-budget, and multi-lookback strategy.
+### `rolling_backtest.py`
 
-Results are written to `outputs/strategy_backtest_adj_output/`.
+Implements the rolling baseline using compounded 12-month momentum and trailing 12-month volatility. It reports:
 
-#### `rolling_backtest.py`
+- Gross and net performance under 0, 5, 10, and 25 bps costs.
+- Turnover, missing-held-return diagnostics, and gross exposure.
+- Correlation and HAC regressions against its static benchmark.
+- Six-factor excess-return regressions.
 
-Implements baseline B using compounded 12-month momentum and trailing 12-month volatility. TSMOM and static use the same eligible universe. It tests costs of 0, 5, 10, and 25 basis points per one-way weight change and reports cumulative performance, turnover, missing-held-return diagnostics, peak gross exposure, static correlation, HAC static-return regressions, and six-factor excess-return regressions.
+Results are written to `outputs/rolling_backtest_output/`. `strategy_backtest.py` supplies shared helpers for this script and is a dependency rather than a third project baseline.
 
-The rolling baseline record uses the `rolling_tsmom` and `rolling_static` rows and corresponding monthly-return columns. Other diagnostic comparisons produced by this script are not additional project baselines.
+## 3. Signal diagnostics
 
-This script does not use the adjusted-baseline output pipeline and writes to `outputs/rolling_backtest_output/`. It imports shared data and signal helpers from the retained `strategy_backtest.py` module; that module is a code dependency, not one of the two project baselines.
+### `signal_diagnostics.py`
 
-### 3. Test whether the signal predicts returns
+Tests whether past returns contain information about subsequent returns:
 
-#### `signal_diagnostics.py`
-
-Tests the economic basis of the strategy before evaluating the complete portfolio:
-
-- Return autocorrelation at lags 1–12.
+- Raw-return autocorrelation at lags 1–12.
 - Absolute- and squared-return autocorrelation as measures of volatility persistence.
-- Next-month returns following positive and negative momentum signals.
-- Return spreads and directional hit rates for 1-, 3-, 6-, and 12-month lookbacks.
+- Cross-sectional 95% Student-t intervals around mean autocorrelations.
+- Next-month returns after positive and negative signals.
+- Return spreads and directional hit rates for 1-, 3-, 6-, and 12-month signals.
 - Stability by instrument, asset class, and period.
 
-Signals use only information available before the return being predicted. Newey–West HAC statistics are based on monthly aggregated signed returns. Results are written to `outputs/signal_diagnostics_output/`.
+Signals use only information available before the return being predicted. Newey–West HAC statistics use monthly aggregated signed returns. Results are written to `outputs/signal_diagnostics_output/`.
 
-### 4. Establish the baseline performance record
+## 4. Standardized adjusted-baseline performance
 
-#### `baseline_performance_analysis.py`
+### `baseline_performance_analysis.py`
 
-Produces the main performance analysis for the adjusted baseline and static benchmark:
+Creates the standardized adjusted-baseline record used by later scripts:
 
 - Cumulative and annualized performance, volatility, Sharpe ratio, and drawdowns.
-- Rolling 12-, 36-, and 60-month performance.
-- Turnover, signal changes, and transaction-cost sensitivity.
+- Rolling 12-, 36-, and 60-month statistics.
+- Turnover and simple transaction-cost sensitivity.
 - Gross, net, long, and short exposure.
-- Timing checks for the one-month execution lag.
+- One-month execution-timing checks.
 
-This script is the single source for standardized **adjusted-baseline** returns, instrument contributions, executed weights, volatility estimates, exposures, turnover, rolling results, and drawdown events. These files are stored in `outputs/baseline_performance_output/` and are reused by the remaining analyses.
+Outputs in `outputs/baseline_performance_output/` include returns, executed weights, instrument contributions, volatility estimates, exposures, turnover, and drawdown events.
 
-#### `baseline_output_loader.py`
+### `baseline_output_loader.py`
 
-Loads the standardized performance files for downstream scripts. It also converts execution-month weights back to formation-date alignment when the risk-validation analysis requires it.
+Loads the standardized files for downstream attribution and risk analysis. It also converts execution-month weights to formation-date alignment when required.
 
-### 5. Explain where the returns come from
+## 5. Return attribution
 
-#### `baseline_return_attribution.py`
+### `baseline_return_attribution.py`
 
-Attributes baseline returns by instrument, asset class, long versus short positions, decade, major drawdown event, and S&P 500 futures proxy bull/bear regime.
+Attributes adjusted-baseline returns by:
 
-Regimes use compounded SP futures proxy wealth. For a peak-to-recovery episode reaching a drawdown of at least 20%, all months after the peak through recovery are retrospectively labeled Bear. Unrecovered episodes continue to sample end; other observed months are Bull. Recovery means wealth reaches or exceeds the prior peak. This is an ex-post internal futures proxy, not an official cash-index classification or a live trading signal. Results are written to `outputs/baseline_return_attribution_output/`.
+- Instrument and asset class.
+- Long and short positions.
+- Decade and major drawdown event.
+- S&P 500 futures proxy bull/bear regime.
 
-### 6. Measure and validate baseline risk
+A bear regime is a retrospectively identified peak-to-recovery episode that reaches a drawdown of at least 20%. It is an internal futures-based historical label rather than an official cash-index regime or real-time signal. Results are written to `outputs/baseline_return_attribution_output/`.
 
-#### `baseline_risk_analysis.py`
+## 6. Baseline risk analysis and validation
 
-Uses the existing diagonal risk model to calculate variance contributions by instrument and asset class, risk concentration, and the effective number of risk positions. It does not add covariance or change the strategy weights. Results are written to `outputs/baseline_risk_analysis_output/`.
+### `baseline_risk_analysis.py`
 
-#### `validate_diagonal_risk_model.py`
+Uses the diagonal baseline model to calculate variance contributions, risk concentration, and the effective number of risk positions. It does not alter strategy weights or add covariance. Results are written to `outputs/baseline_risk_analysis_output/`.
 
-Tests whether the diagonal model predicts subsequent portfolio risk. Formation-date predicted volatility is compared with fixed-weight realized volatility over the following 12 months, with a three-month robustness check. Monthly forecasts are saved, and the analysis reports bias, MAE, RMSE, correlation, and exceedance frequency by period and asset class. High-volatility evaluation labels use the upper quintile of subsequent fixed-weight realized volatility; these are ex-post labels. Exceedance means realized risk exceeds the model prediction, not an intended portfolio target, since no portfolio target is implemented. Repeat this validation for each future enhanced risk model.
+### `validate_diagonal_risk_model.py`
 
-Results are written to `outputs/risk_model_validation_output/`.
+Compares formation-date predicted portfolio volatility with subsequent fixed-weight realized volatility over 12 months, with a three-month robustness check. It reports forecast bias, MAE, RMSE, correlation, and exceedance frequencies by period and asset class. Results are written to `outputs/risk_model_validation_output/`.
 
-#### `covariance_risk_validation.py`
+## 7. Benchmark and factor comparisons
 
-Compares the existing diagonal forecast with expanding covariance, six-month
-half-life EWMA covariance, and fixed 50% shrinkage toward the expanding diagonal.
-Uses unchanged adjusted-baseline weights and identical evaluation dates within
-each 3- or 12-month horizon. Pairwise missing-history estimates require 36
-overlapping months for correlations, with zero-correlation fallback and PSD
-correlation repair. No portfolio volatility targeting is applied. EWMA changes
-both marginal variances and correlations. Results are descriptive, with overlapping
-forward windows; parameters are fixed rather than optimized on these results.
+### `generate_strategy_analysis.py`
 
-Run after `baseline_performance_analysis.py`. Forecasts, overall and decade-level
-accuracy, matrix diagnostics, a comparison plot, and methodology are written to
-`outputs/covariance_risk_validation_output/`.
+Compares the adjusted baseline with:
 
-#### `portfolio_volatility_targeting.py`
+- Its always-long static futures benchmark over 1976–2014.
+- SG Trend over the 2000–2014 overlap.
+- Mkt-RF, SMB, HML, Mom, RMW, and CMA factors.
 
-Compares unchanged baseline weights with portfolio targeting under all four risk
-models. Fixed parameters are a 10% annual portfolio volatility target, 4x gross
-exposure cap, and 2x maximum multiplier on baseline weights. Formation-date risk
-forecasts scale next-month positions. Reports 0/5/10/25 bps costs, rolling realized
-risk, exposure, binding limits, executed weights, and descriptive subperiods.
-No performance-based parameter fitting or untouched holdout claim is made.
+The analysis includes raw and volatility-matched performance, rolling statistics, drawdowns, correlation, tracking error, and HAC regressions. Results are written to `outputs/strategy_analysis_output/`.
 
-Includes a cap-only control that proportionally reduces baseline positions above
-4x gross exposure without forecasting risk or amplifying positions. The cap
-ablation report and differences table distinguish the cap effect from additional
-dynamic targeting and compare risk models under common targeting rules.
+# Part 2 — Implemented strategy enhancements
 
-For the initial risk modeling, targeting, and cap-only results, see the
-[October 27, 2026 group update](outputs/portfolio_volatility_targeting_output/group_update_2026-10-27.md).
+Part 2 begins with the October 27 commit `24949b5`. Each subsection below describes an enhancement that has been implemented in code. All historical comparisons use an already studied sample and should be interpreted as descriptive rather than untouched out-of-sample evidence.
 
-Run after `baseline_performance_analysis.py`; covariance forecasts are recomputed
-using full formation-date history. Results go to
-`outputs/portfolio_volatility_targeting_output/`. Synthetic timing and limit
-checks: `python -m unittest test_portfolio_volatility_targeting.py`.
+## 1. Covariance-aware risk forecasting
 
-### 7. Compare the baseline with benchmarks and factors
+### `covariance_risk_validation.py`
 
-#### `generate_strategy_analysis.py`
+Adds three covariance-aware forecasts while leaving the adjusted-baseline weights unchanged:
 
-Compares the **adjusted baseline** with:
+- Expanding sample covariance.
+- EWMA covariance with a six-month half-life.
+- Fixed 50% shrinkage toward the expanding diagonal matrix.
 
-- The always-long static futures benchmark over 1976–2014.
-- SG Trend over the available 2000–2014 overlap.
-- Six equity factors: Mkt-RF, SMB, HML, Mom, RMW, and CMA.
+Pairwise correlations require 36 overlapping observations, otherwise fall back to zero. Correlation matrices are repaired to be positive semidefinite and then rescaled to preserve marginal variances. Forecasts are evaluated over identical three- and 12-month forward windows.
 
-The analysis includes raw and volatility-matched performance, rolling statistics, drawdowns, correlation, tracking error, and HAC regressions. Volatility matching uses full-sample realized volatility and is descriptive rather than tradable. The equity factors are also an incomplete risk model for a diversified futures strategy.
+At the 12-month horizon, covariance-aware models reduce RMSE from 5.38% for the diagonal model to 3.75%–3.90%. Fixed shrinkage has the lowest MAE at 2.72%. Forecast tables, matrix diagnostics, methodology, and figures are written to `outputs/covariance_risk_validation_output/`.
 
-Results are written to `outputs/strategy_analysis_output/`.
+## 2. Portfolio volatility targeting and gross-exposure control
 
-## Recommended run order
+### `portfolio_volatility_targeting.py`
+
+Scales the adjusted-baseline positions using diagonal, expanding-covariance, EWMA-covariance, and shrunk-covariance forecasts. The implemented rules are:
+
+- 10% annual portfolio volatility target.
+- 4x gross-exposure cap.
+- Maximum 2x multiplier on the original baseline weights.
+- Formation-date forecasts applied to next-month positions.
+- Costs of 0, 5, 10, and 25 bps per one-way target-weight change.
+
+A cap-only control reduces positions above 4x gross exposure without forecasting risk or increasing exposure. This separates the cap effect from forecast-based scaling.
+
+At 10 bps, EWMA-covariance targeting increases Sharpe from 0.903 to 0.965 and reduces maximum drawdown from -26.10% to -14.24%. The cap alone improves the drawdown to -24.25%, so it does not explain the full targeting result. Outputs are written to `outputs/portfolio_volatility_targeting_output/`.
+
+Synthetic timing and limit tests are in `test_portfolio_volatility_targeting.py`. The initial covariance, targeting, and cap results are summarized in [the October 27 group update](outputs/portfolio_volatility_targeting_output/group_update_2026-10-27.md).
+
+## 3. EWMA-enhanced strategy and detailed transaction costs
+
+### `transaction_cost_model.py`
+
+Implements the Lecture 8 futures-cost model with drift-adjusted turnover. It separates:
+
+- Commission and exchange fees.
+- Futures roll costs based on contract cycles.
+- Margin financing when margin exceeds available equity.
+- Asset-class half-spreads.
+- Square-root market impact based on volatility, AUM, ADV, and execution days.
+
+Liquidity uses class-level ADV assumptions with an illiquidity haircut when trailing contract volume is low. Parameters are fixed and illustrative rather than estimated from strategy performance.
+
+### `enhanced_strategy_backtest.py`
+
+Compares five strategies over January 1976–December 2014:
+
+- `baseline`: expanding-volatility sizing without portfolio targeting.
+- `ewma_vol`: six-month half-life EWMA instrument sizing.
+- `ewma_cov_target`: baseline sizing plus EWMA-covariance targeting.
+- `enhanced`: EWMA instrument sizing plus EWMA-covariance targeting.
+- `static_bmk`: the always-long course benchmark.
+
+It evaluates gross returns, flat 2/10 bps cases, and the detailed model at $100 million, $1 billion, and $10 billion AUM. It also reports capacity, cost components, asset-class costs, execution-horizon sensitivity, and ADV/volatility sensitivity.
+
+At $1 billion under the detailed cost assumptions, the baseline has Sharpe 0.889 and maximum drawdown -26.23%; the combined enhanced strategy has Sharpe 1.021 and maximum drawdown -14.24%. Estimated annual costs are 87.9 and 90.2 bps, respectively. Outputs are written to `outputs/enhanced_strategy_output/`.
+
+### `plot_cost_analysis.py`
+
+Builds the cost-analysis summary figure from the enhanced-strategy outputs, including net Sharpe by cost case, capacity by AUM, asset-class costs, and input sensitivity.
+
+Synthetic cost-model tests are in `test_transaction_cost_model.py`.
+
+## 4. Rebalance-frequency enhancement
+
+### `rebalance_frequency_backtest.py`
+
+Uses reconstructed daily closes to compare monthly, weekly, and daily signal updates. All versions retain the adjusted baseline's 12-month momentum convention and expanding monthly volatility estimate. Positions drift between rebalances and orders execute at the next available close.
+
+At 10 bps, weekly rebalancing has the strongest full-sample result. Daily rebalancing has the highest gross result but annual turnover of approximately 31.7x and deteriorates fastest as assumed costs increase. Outputs and a full methodology report are written to `outputs/rebalance_frequency_output/`.
+
+## 5. Net- and gross-exposure controls
+
+### `net_exposure_backtest.py`
+
+Tests:
+
+- The original adjusted baseline.
+- A 4x gross-exposure cap.
+- A symmetric ±1x net-exposure cap.
+- Both limits together.
+- Controls scaled to match the capped strategies' monthly gross exposure.
+
+At 10 bps, the gross cap slightly improves Sharpe and drawdown. The net cap lowers return and produces worse drawdowns than its gross-exposure-matched controls, so the implemented net limit does not improve the historical risk-return tradeoff. Results are written to `outputs/net_exposure_output/`.
+
+## 6. Economic-trend strategy code
+
+### `economic_trend.py`
+
+Implements five macro themes—growth, inflation, trade, monetary policy, and risk aversion—and maps them to directional futures exposures. It constructs price-trend, individual-theme, economic-trend, and blended portfolios. The current configuration includes:
+
+- Trailing 12-month instrument volatility with a 1% floor.
+- A 36-month realized-volatility scaling window.
+- A 10% strategy volatility target.
+- Three-month signal smoothing.
+- A 20% economic-trend allocation in the blended strategy.
+- A simple 2 bps turnover and roll-cost model.
+
+### `economic_trend_validation.py`
+
+Implements a 1980–1997 training period and a 1998–2014 validation period for signal form, trade-theme sign, smoothing, class balancing, and blend weights.
+
+The code is committed, but the required `macro_data/` inputs and `outputs/economic_trend_output/` are not included in the repository. Therefore, this README reports the implemented methodology but does not report an economic-trend performance result.
+
+## 7. Post-2014 exposure and rebalancing tests
+
+The latest implementation extends the original universe with uploaded `*_RAD.CSV` continuous-futures closes. The common evaluation period is January 2015–May 2025, with pre-2015 history retained to initialize signals, volatility, and positions. These files are not committed, but the generated reports and output tables are included.
+
+### `net_exposure_out_of_sample.py`
+
+Repeats the gross- and net-exposure experiment on a shared price-trend baseline with a 12-month signal, trailing 12-month instrument volatility with a 1% floor, and a 10% portfolio target based on a 36-month window. It compares the 4x gross cap, ±1x net cap, their combination, and gross-matched controls.
+
+The shared baseline has -0.42% net CAGR and -26.33% maximum drawdown. The gross cap reduces the drawdown to -21.32% with -0.47% net CAGR. The net cap performs worse than its matched-gross control, with -1.31% net CAGR and -30.65% drawdown. Outputs are in `outputs/net_exposure_out_of_sample_aligned/`; the earlier non-aligned run is retained in `outputs/net_exposure_out_of_sample/`.
+
+### `exposure_smoothing_backtest.py`
+
+Applies a trailing three-month average to gross leverage and, in the joint variant, to signed net exposure as a share of gross exposure. Joint smoothing produces 0.04% net CAGR and -24.95% drawdown versus -0.42% and -26.33% for the shared baseline, but raises annual turnover from 14.70x to 17.40x. Results are in `outputs/exposure_smoothing_output/`.
+
+### `short_budget_backtest.py`
+
+Keeps long positions unchanged and halves every short position. A matched control scales both sides proportionally to the same gross exposure. The half-short variant produces 0.88% net CAGR and -16.74% drawdown versus -0.15% and -21.53% for the matched control. Because the rule was selected after examining the 2015–2025 attribution, this is an exploratory result rather than a clean holdout test. Results are in `outputs/short_budget_output/`.
+
+### `rebalance_frequency_out_of_sample.py`
+
+Repeats the monthly, weekly, and daily execution experiment on the later sample and can apply the half-short rule with `--half-short`. Under the original weights, daily leads before costs, weekly leads at 5 and 10 bps, and monthly leads at 25 bps. At 10 bps all schedules have negative CAGR. With half-sized shorts, weekly earns 0.24% net CAGR at 5 bps, while all schedules remain negative at 10 bps. Results are in `outputs/rebalance_frequency_out_of_sample/` and `outputs/rebalance_frequency_half_short/`.
+
+The consolidated methodology and interpretation are in [the post-2014 extension report](outputs/strategy_extensions_out_of_sample_report.md).
+
+## Reproducible run order
+
+### Part 1
 
 ```bash
 python analysis_eda.py
@@ -194,70 +293,49 @@ python baseline_performance_analysis.py
 python baseline_return_attribution.py
 python baseline_risk_analysis.py
 python validate_diagonal_risk_model.py
-python covariance_risk_validation.py
-python portfolio_volatility_targeting.py
-python rebalance_frequency_backtest.py
-python net_exposure_backtest.py
 python generate_strategy_analysis.py
 ```
 
-The [rebalance frequency experiment](outputs/rebalance_frequency_output/frequency_report.md)
-compares monthly, weekly and daily schedules for the adjusted baseline using
-the same daily-close data, position-sizing rules and cost scenarios.
+`rolling_backtest.py` can run independently. Run `baseline_performance_analysis.py` before the adjusted-baseline attribution, risk, and benchmark scripts.
 
-The [net exposure experiment](outputs/net_exposure_output/net_exposure_report.md)
-compares a ±1× monthly net exposure limit with the 4× gross exposure cap and
-controls matched on monthly gross exposure.
+### Part 2
 
-Run `python net_exposure_out_of_sample.py --data-dir <directory-with-RAD-files>`
-to repeat the exposure experiment after December 2014 using the price trend
-baseline and trading and roll costs from `economic_trend.py`. The
-[aligned sample report](outputs/net_exposure_out_of_sample_aligned/out_of_sample_report.md)
-reports both annualized mean return and CAGR.
+```bash
+python covariance_risk_validation.py
+python portfolio_volatility_targeting.py
+python enhanced_strategy_backtest.py
+python plot_cost_analysis.py
+python rebalance_frequency_backtest.py
+python net_exposure_backtest.py
+python -m unittest test_portfolio_volatility_targeting.py
+python -m unittest test_transaction_cost_model.py
+```
 
-With the same RAD files, run `python exposure_smoothing_backtest.py` to
-compare [leverage and imbalance smoothing](outputs/exposure_smoothing_output/exposure_smoothing_report.md)
-with the shared price trend baseline. Run `python rebalance_frequency_out_of_sample.py`
-to [compare monthly, weekly, and daily schedules out of sample](outputs/rebalance_frequency_out_of_sample/frequency_report.md)
-using the original frequency experiment's daily execution and cost model.
+The economic-trend scripts are excluded from the reproducible sequence because their macro input files are not committed.
 
-The [combined out-of-sample report](outputs/strategy_extensions_out_of_sample_report.md)
-covers rebalance frequency, gross leverage, and long–short imbalance.
-Run `python short_budget_backtest.py` for the half-short allocation and
-[matched-exposure comparison](outputs/short_budget_output/short_budget_report.md).
-Pass `--half-short` to `rebalance_frequency_out_of_sample.py` to test the
-[half-short rule across all three schedules](outputs/rebalance_frequency_half_short/frequency_report.md).
+With the uploaded `*_RAD.CSV` files available, reproduce the post-2014 experiments with:
 
-`rolling_backtest.py` can run separately and does not require the adjusted performance outputs.
-
-Run `baseline_performance_analysis.py` before the attribution, risk, validation, and benchmark scripts because those analyses use its standardized outputs.
+```bash
+python net_exposure_out_of_sample.py --data-dir <RAD-data-directory>
+python exposure_smoothing_backtest.py --data-dir <RAD-data-directory>
+python short_budget_backtest.py --data-dir <RAD-data-directory>
+python rebalance_frequency_out_of_sample.py --data-dir <RAD-data-directory>
+python rebalance_frequency_out_of_sample.py --half-short --data-dir <RAD-data-directory>
+```
 
 ## Important assumptions and limitations
 
-- Backtests use monthly data and rebalance monthly.
-- Sharpe ratios generally use a zero risk-free rate unless an excess-return regression is explicitly reported.
-- The adjusted baseline risk analysis assumes zero covariance across instruments; neither baseline uses covariance-aware position construction.
-- Neither baseline has an explicit portfolio volatility target, leverage cap, or volatility floor. Rolling peak gross exposure is approximately 29.75, versus 4.60 for adjusted; compare implementation risk as well as headline Sharpe.
-- Missing realized returns for held instruments are filled with zero.
-- Transaction costs are illustrative and do not include contract-specific spreads, futures roll costs, financing, margin requirements, or liquidity constraints.
-- SG Trend may use different instruments, fees, signals, and risk targets, so it is a comparator rather than an exact replication target.
-
-## Planned enhancements
-
-The main next steps are:
-
-1. Add expanding, rolling, EWMA, and shrinkage covariance estimates.
-2. Validate each risk model against subsequent realized volatility.
-3. Add portfolio-level volatility targeting with leverage and scaling limits.
-4. Improve asset-class risk diversification.
-5. Evaluate the enhanced strategies with walk-forward tests and more realistic transaction costs.
-
-## Coverage and scope
-
-The scripts cover return and volatility autocorrelation at lags 1–12; signal predictiveness across horizons, instruments, classes, and periods; cumulative and rolling performance; drawdown depth and recovery; exposure and trading costs; return attribution by market, class, direction, decade, regime, and drawdown event; diagonal risk concentration; future-risk validation; and static / SG Trend / factor comparisons.
-
-Detailed return attribution, diagonal risk validation, and SG Trend results use the standardized adjusted-baseline outputs. They have not all been repeated for the rolling baseline. Rolling has its own performance, cost, static-correlation, diagnostics, and regression outputs. Completed E1–E4 experiments should be distinguished from planned full-covariance, portfolio-targeting, and walk-forward enhancements.
+- The two baselines rebalance monthly. Weekly and daily rebalancing appear only in the frequency enhancement.
+- Sharpe ratios generally assume a zero risk-free rate unless an excess-return regression is explicitly reported.
+- The original adjusted baseline assumes zero cross-instrument covariance; covariance-aware construction appears only in Part 2.
+- Neither original baseline has a portfolio volatility target, leverage cap, or volatility floor. These controls are Part 2 enhancements.
+- Missing held-market returns are generally filled with zero. The daily-frequency experiment instead follows its documented marking and pending-order rules.
+- Baseline costs use fixed bps-per-turnover approximations. The detailed Part 2 model adds roll, financing, spread, and market impact but still relies on class-level liquidity assumptions.
+- SG Trend uses different instruments, fees, signals, and risk targets and is a comparator rather than a replication target.
+- Newer scripts use pandas month-end aliases such as `ME`; use pandas 2.2 or later.
+- The post-2014 files are external continuous-futures series. Overlap checks reproduce historical returns closely, but the repository does not independently validate their later contract construction or missing quotes.
+- The post-2014 smoothing and half-short rules were developed after inspecting that period and are exploratory rather than untouched out-of-sample tests.
 
 ## Dependencies
 
-Use Python with `numpy`, `pandas`, `matplotlib`, `scipy`, `statsmodels`, and `openpyxl` available. Run commands from the project root so the supplied data files and output folders resolve correctly.
+Use Python with `numpy`, `pandas`, `matplotlib`, `scipy`, `statsmodels`, and `openpyxl`. Run commands from the project root so data and output paths resolve correctly.
