@@ -65,7 +65,7 @@ def formation_targets(quotes, asset_map):
     return targets, month_end, monthly_returns, signal
 
 
-def simulate(quotes, targets, cost_bps):
+def simulate(quotes, targets, cost_bps, *, stale_exit_days=None):
     """Mark existing holdings, then fill new targets at the next quoted close."""
     calendar = targets.index
     marks = quotes.reindex(calendar).ffill()
@@ -75,6 +75,7 @@ def simulate(quotes, targets, cost_bps):
     position = np.zeros(len(quotes.columns))
     pending = np.zeros(len(quotes.columns), dtype=bool)
     target = position.copy()
+    days_unquoted = np.zeros(len(quotes.columns), dtype=int)
     rows = []
     for i, date in enumerate(calendar):
         gross_return = float(position @ changes[i])
@@ -83,6 +84,13 @@ def simulate(quotes, targets, cost_bps):
         drifted = position * (1 + changes[i]) / (1 + gross_return)
         fills = pending & quoted[i]
         desired = np.where(fills, target, drifted)
+        did_trade = fills.any()
+        if stale_exit_days is not None:
+            days_unquoted = np.where(quoted[i], 0, days_unquoted + 1)
+            # Sensitivity only. Approximate an exit at the last known mark.
+            stale_exits = (days_unquoted >= stale_exit_days) & (drifted != 0)
+            desired[stale_exits] = 0
+            did_trade = did_trade or stale_exits.any()
         turnover = float(np.abs(desired - drifted).sum())
         # Size trades relative to marked NAV before commission. Costs lower
         # NAV and therefore increase the post-cost weights slightly.
@@ -94,7 +102,7 @@ def simulate(quotes, targets, cost_bps):
         pending[fills] = False
         stale_gross = np.abs(position[~quoted[i]]).sum()
         rows.append((gross_return, net_return, turnover, (1 + gross_return)*cost,
-                     np.abs(position).sum(), stale_gross, bool(fills.any())))
+                     np.abs(position).sum(), stale_gross, bool(did_trade)))
         # Today's close and signal can only affect future trades.
         if np.isfinite(instructions[i]).all():
             target = instructions[i]

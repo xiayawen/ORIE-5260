@@ -222,6 +222,14 @@ def blend_name(w: float) -> str:
     return f"blend_{int(round(w * 100))}"
 
 
+def price_trend_weights(returns: pd.DataFrame, vol: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Build the price-only baseline without loading macro data."""
+    if vol is None:
+        vol = instrument_vol(returns)
+    direction = np.sign(returns.rolling(12, min_periods=12).sum())
+    return scale_to_target(risk_weights(direction, vol), returns)
+
+
 def build(returns: pd.DataFrame, macro_dir: Path = MACRO_DIR):
     """Formation weights (month-end t) for the baseline, each theme, the sleeve and the blends."""
     asset_class = read_asset_map().set_index("ID")["AssetClass"].reindex(returns.columns).fillna("COMM")
@@ -232,9 +240,7 @@ def build(returns: pd.DataFrame, macro_dir: Path = MACRO_DIR):
     if SMOOTH_MONTHS > 1:                         # trailing mean of past signals only
         signals = signals.rolling(SMOOTH_MONTHS, min_periods=1).mean()
 
-    strategies = {}
-    price_dir = np.sign(returns.rolling(12, min_periods=12).sum())
-    strategies["price_trend"] = scale_to_target(risk_weights(price_dir, vol), returns)
+    strategies = {"price_trend": price_trend_weights(returns, vol)}
     themes = {}
     for theme in SIGNS.index:
         d = theme_direction(signals[theme], theme, returns.columns, asset_class)

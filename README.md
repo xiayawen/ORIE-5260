@@ -161,6 +161,9 @@ Includes a cap-only control that proportionally reduces baseline positions above
 ablation report and differences table distinguish the cap effect from additional
 dynamic targeting and compare risk models under common targeting rules.
 
+For the initial risk modeling, targeting, and cap-only results, see the
+[October 27, 2026 group update](outputs/portfolio_volatility_targeting_output/group_update_2026-10-27.md).
+
 Run after `baseline_performance_analysis.py`; covariance forecasts are recomputed
 using full formation-date history. Results go to
 `outputs/portfolio_volatility_targeting_output/`. Synthetic timing and limit
@@ -205,6 +208,25 @@ the same daily-close data, position-sizing rules and cost scenarios.
 The [net exposure experiment](outputs/net_exposure_output/net_exposure_report.md)
 compares a ±1× monthly net exposure limit with the 4× gross exposure cap and
 controls matched on monthly gross exposure.
+
+Run `python net_exposure_out_of_sample.py --data-dir <directory-with-RAD-files>`
+to repeat the exposure experiment after December 2014 using the price trend
+baseline and trading and roll costs from `economic_trend.py`. The
+[aligned sample report](outputs/net_exposure_out_of_sample_aligned/out_of_sample_report.md)
+reports both annualized mean return and CAGR.
+
+With the same RAD files, run `python exposure_smoothing_backtest.py` to
+compare [leverage and imbalance smoothing](outputs/exposure_smoothing_output/exposure_smoothing_report.md)
+with the shared price trend baseline. Run `python rebalance_frequency_out_of_sample.py`
+to [compare monthly, weekly, and daily schedules out of sample](outputs/rebalance_frequency_out_of_sample/frequency_report.md)
+using the original frequency experiment's daily execution and cost model.
+
+The [combined out-of-sample report](outputs/strategy_extensions_out_of_sample_report.md)
+covers rebalance frequency, gross leverage, and long–short imbalance.
+Run `python short_budget_backtest.py` for the half-short allocation and
+[matched-exposure comparison](outputs/short_budget_output/short_budget_report.md).
+Pass `--half-short` to `rebalance_frequency_out_of_sample.py` to test the
+[half-short rule across all three schedules](outputs/rebalance_frequency_half_short/frequency_report.md).
 
 `rolling_backtest.py` can run separately and does not require the adjusted performance outputs.
 

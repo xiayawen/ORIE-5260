@@ -107,44 +107,49 @@ def write_report(summary, exposure):
     (OUT / "net_exposure_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def plot_comparison(monthly):
+def plot_comparison(monthly, output_dir=OUT, *, return_column=f"return_{REPORT_COST}bps",
+                    cost_label=f"{REPORT_COST} bps trading costs", baseline_label=LABELS["baseline"],
+                    names=("baseline", "gross_only", "net_only", "both", "both_matched_gross"),
+                    include_initial_wealth=True):
     fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
-    names = ("baseline", "gross_only", "net_only", "both", "both_matched_gross")
     for name in names:
         data = monthly[name]
-        line, = axes[0].plot(data.net_exposure, lw=0.8, label=LABELS[name])
-        wealth = (1 + data[f"return_{REPORT_COST}bps"]).cumprod()
-        drawdown = wealth / wealth.cummax().clip(lower=1) - 1
+        label = baseline_label if name == "baseline" else LABELS[name]
+        line, = axes[0].plot(data.net_exposure, lw=0.8, label=label)
+        wealth = (1 + data[return_column]).cumprod()
+        peak = wealth.cummax()
+        if include_initial_wealth:
+            peak = peak.clip(lower=1)
+        drawdown = wealth / peak - 1
         axes[1].plot(drawdown, lw=1, color=line.get_color())
     for limit in (NET_CAP, -NET_CAP):
         axes[0].axhline(limit, color="black", linestyle="--", lw=0.8)
     axes[0].set(title="Net exposure at monthly rebalance", ylabel="Multiple of equity")
-    axes[1].set(title=f"Drawdown after {REPORT_COST} bps trading costs", ylabel="Drawdown")
+    axes[1].set(title=f"Drawdown after {cost_label}", ylabel="Drawdown")
     axes[1].yaxis.set_major_formatter(PercentFormatter(1))
     axes[0].legend(fontsize=8, ncol=2)
     for ax in axes:
         ax.grid(alpha=0.2)
     fig.tight_layout()
-    fig.savefig(OUT / "net_exposure_comparison.png", dpi=150)
+    fig.savefig(output_dir / "net_exposure_comparison.png", dpi=150)
     plt.close(fig)
 
 
-def main():
-    returns = read_returns()
-    baseline, _ = build_baseline(returns, read_asset_map())
-    formed = baseline["weights"]
+def build_exposure_strategies(formed):
     gross_only, _ = cap_only_weights(formed)
     net_only = net_cap_weights(formed)
     both = net_cap_weights(gross_only)
-    strategies = {
+    return {
         "baseline": formed, "gross_only": gross_only, "net_only": net_only, "both": both,
         "net_matched_gross": match_gross(formed, net_only),
         "both_matched_gross": match_gross(formed, both),
     }
-    OUT.mkdir(parents=True, exist_ok=True)
+
+
+def evaluate_exposure_strategies(returns, formed, start):
     summary, exposure, monthly = [], [], {}
-    for name, weights in strategies.items():
-        raw, turnover, executed = (item.loc[EVAL_START:] for item in simulate(returns, weights))
+    for name, weights in build_exposure_strategies(formed).items():
+        raw, turnover, executed = (item.loc[start:] for item in simulate(returns, weights))
         gross = executed.abs().sum(axis=1)
         net = executed.sum(axis=1)
         data = pd.DataFrame({"gross_return": raw, "turnover": turnover, "gross_exposure": gross,
@@ -160,9 +165,14 @@ def main():
             data[f"return_{bps}bps"] = net_return
             summary.append({"strategy": name, "cost_bps": bps, **statistics(net_return, turnover)})
         monthly[name] = data
+    return pd.DataFrame(summary), pd.DataFrame(exposure).set_index("strategy"), monthly
 
-    summary = pd.DataFrame(summary)
-    exposure = pd.DataFrame(exposure).set_index("strategy")
+
+def main():
+    returns = read_returns()
+    baseline, _ = build_baseline(returns, read_asset_map())
+    summary, exposure, monthly = evaluate_exposure_strategies(returns, baseline["weights"], EVAL_START)
+    OUT.mkdir(parents=True, exist_ok=True)
     summary.to_csv(OUT / "performance_summary.csv", index=False)
     exposure.to_csv(OUT / "exposure_summary.csv")
     pd.concat(monthly, names=["strategy", "Date"]).to_csv(OUT / "monthly_results.csv")
