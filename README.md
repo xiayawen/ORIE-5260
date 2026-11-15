@@ -21,6 +21,94 @@ The adjusted baseline is the common reference strategy for most attribution, ris
 
 The futures universe contains commodities, equity indices, fixed income, and FX. The return panel is unbalanced because instruments begin at different dates.
 
+## Additional tradable futures factors
+
+These experiments require Python with `numpy`, `pandas`, `matplotlib`,
+`scipy`, `statsmodels` and `scikit-learn` (tested with scikit-learn 1.7.1).
+To reproduce the latest experiment from a fresh checkout, first run
+`python3 select_factor_subset.py` to create the training-only screening table,
+then run `python3 alternative_factor_models.py`. For the earlier original-TSMOM
+and XSMOM overlay studies, run `tsmom_factor_overlay.py` or
+`momentum_overlay.py` after that screening step. Generated files are written
+under `outputs/` and are not required as checked-in inputs.
+
+The next experiment adds six peer/residual signals and rank-target Ridge,
+random forest, Extra Trees and gradient boosting overlays; see
+[ALTERNATIVE_MODELS_REPORT.md](ALTERNATIVE_MODELS_REPORT.md) and run
+`alternative_factor_models.py`. Validation selects a direct residual-momentum
+sleeve rather than a machine-learning sleeve. Results retain the original TSMOM
+methodology and disclose the higher gross leverage.
+
+For a comparison against the **original project price-trend TSMOM**, use
+`tsmom_factor_overlay.py` and [TSMOM_FACTOR_OVERLAY_REPORT.md](TSMOM_FACTOR_OVERLAY_REPORT.md).
+It reuses `economic_trend.py` baseline construction, volatility scaling and
+native trading/roll costs; earlier XSMOM overlay results use a different core.
+
+The direct Mom-plus-factor overlay experiment is in
+[MOMENTUM_OVERLAY_REPORT.md](MOMENTUM_OVERLAY_REPORT.md). Run
+`momentum_overlay.py` to compare a retained momentum core against a
+validation-selected defensive overlay at the same total gross exposure.
+
+The chronological random-forest experiment using these features is documented
+in [TREE_MODEL_REPORT.md](TREE_MODEL_REPORT.md). Run `tree_factor_prediction.py`
+to reproduce its validation selection, 2005–2014 test forecasts and trading
+diagnostics. Test data are excluded from fitting and hyperparameter selection.
+The subsequent train-only six-factor screen and fixed-model ablation are in
+[FACTOR_SELECTION_REPORT.md](FACTOR_SELECTION_REPORT.md); run
+`select_factor_subset.py` to reproduce them. The smaller subset did not improve
+validation or later-period results, and the latter period is already observed.
+
+The library now includes **20 more candidate signals** (25 portfolios including
+the original four signals and TSMOM control). See [FACTOR_CATALOG.md](FACTOR_CATALOG.md)
+for every formula, family and research limitation. The additional signals include
+reversal, tail/distribution risk, volatility regimes, seasonality and trend-path
+variants. These are overlapping research candidates, not 20 independent premia.
+Their net Sharpe and TSMOM correlations are exported to
+`outputs/futures_factor_output/additional_20_comparison.csv`.
+
+Run `python3 futures_factor_backtest.py` to build price-based research portfolios
+alongside a TSMOM control. These are trading signals, distinct from the six equity
+factors used in attribution regressions.
+
+| Portfolio | Formation signal | Long / short direction |
+| --- | --- | --- |
+| Reversal_1m | Negative latest monthly return divided by expanding volatility | Recent losers / winners |
+| LowVol_12m | Negative trailing 12-month standard deviation | Low / high volatility |
+| LowDownside_12m | Negative square root of the mean squared negative returns over 12 months, including zeros for positive months | Low / high downside risk |
+| XSMOM_12_1 | Sum of 11 monthly returns ending one month before formation, divided by expanding volatility | Relative winners / losers |
+
+Each new factor ranks instruments within asset class, centers ranks, normalizes
+each class to unit gross exposure, and equally allocates across active classes.
+At least four instruments per class and 36 historical observations for volatility
+are required. Each class is dollar neutral; portfolios are not beta neutral or
+equal volatility. The TSMOM control uses inverse-volatility directional positions
+with the same class allocation and unit gross normalization, so it differs from
+the original course baseline. All weights execute one month after formation.
+
+Outputs in `outputs/futures_factor_output/` include formation weights, coverage,
+monthly gross/net returns, drift-adjusted turnover, correlations, and full/common,
+pre-2000 and 2000-onward performance. Costs are a simple 10 bps per dollar traded,
+not the full futures roll/impact model. Months with missing held-market returns
+are excluded rather than treated as zero. Comparisons use the intersection of
+valid months for every factor; this can contain calendar gaps. CAGR and drawdown
+statistics chain retained observations and do not reconstruct missing months.
+Sharpe uses a zero return hurdle, consistent with treating inputs as futures P&L.
+Subperiod results are descriptive, not an untouched out-of-sample test.
+
+Initial common-sample results (453 retained months, January 1976–November 2014):
+
+| Portfolio | Gross Sharpe | Net Sharpe, 10 bps | Correlation with TSMOM |
+| --- | ---: | ---: | ---: |
+| TSMOM control | 0.72 | 0.68 | 1.00 |
+| Reversal_1m | -0.49 | -0.74 | -0.33 |
+| LowVol_12m | -0.01 | -0.06 | -0.24 |
+| LowDownside_12m | 0.36 | 0.31 | 0.27 |
+| XSMOM_12_1 | 0.48 | 0.41 | 0.53 |
+
+These exploratory results do not establish incremental alpha. Carry requires
+contract term structures; fundamental value requires appropriate valuation data.
+Neither is inferred from continuous returns alone.
+
 # Part 1 — EDA and baseline-strategy analysis
 
 Part 1 contains the project through the final commit before October 27. Its purpose is to establish reliable data, define the baseline strategies, and understand their historical behavior before changing the models.
