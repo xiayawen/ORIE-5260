@@ -1,0 +1,5 @@
+rule,median_IS_net_sharpe_change
+band_10,0.010050362997125306
+band_25,0.003929414566818168
+none,0.0
+partial_50,-0.0888549380905665

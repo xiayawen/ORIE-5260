@@ -17,6 +17,7 @@ The adjusted baseline is the common reference strategy for most attribution, ris
 - `Lecture3_livedata.xlsx`: SG Trend, GSCI, risk-free rate, and Mkt-RF, SMB, HML, Mom, RMW, and CMA factor returns from January 2000 to December 2014.
 - `macro_data/` (not committed): FRED-style CSV inputs expected by the economic-trend scripts, including `INDPRO.csv`, `CPIAUCSL.csv`, and `GS2.csv`; `BAA10Y.csv` is optional. The committed one-byte `macrodata` file is not used by the code.
 - `FuturesUnderlyingData_FullSample/.../*_RAD.CSV` (not committed): uploaded continuous-futures closes used for the January 2015–May 2025 extension. The scripts accept another location through `--data-dir`.
+- `MonthlyReturns_FullSample.xlsx`: monthly returns for the same 58 markets from February 1969 to May 2025. On 1969–2014 it matches `MonthlyReturns.csv` except six December 2014 cells that are now filled. Used by the Part 2 §8–§12 in-sample / out-of-sample analysis.
 
 The futures universe contains commodities, equity indices, fixed income, and FX. The return panel is unbalanced because instruments begin at different dates.
 
@@ -127,7 +128,7 @@ A bear regime is a retrospectively identified peak-to-recovery episode that reac
 
 ### `baseline_risk_analysis.py`
 
-Uses the diagonal baseline model to calculate variance contributions, risk concentration, and the effective number of risk positions. It does not alter strategy weights or add covariance. Results are written to `outputs/baseline_risk_analysis_output/`.
+Uses the diagonal baseline model to calculate variance contributions, risk concentration, and the effective number of risk positions. It does not alter strategy weights. Results are written to `outputs/baseline_risk_analysis_output/`. The covariance-based decomposition added later is described in Part 2, §9.
 
 ### `validate_diagonal_risk_model.py`
 
@@ -280,6 +281,52 @@ Repeats the monthly, weekly, and daily execution experiment on the later sample 
 
 The consolidated methodology and interpretation are in [the post-2014 extension report](outputs/strategy_extensions_out_of_sample_report.md).
 
+## 8. Monthly full-sample extension and look-ahead test
+
+`risk_budgeting.read_full_sample_returns()` loads `MonthlyReturns_FullSample.xlsx`. Sections 8–12 use one convention:
+
+- **In-sample (IS):** January 1976–December 2014. All design and parameter choices were made on this period.
+- **Out-of-sample (OOS):** January 2015–May 2025 (125 months), evaluation only. Nothing is re-estimated or re-selected; expanding estimates continue month by month.
+- **Costs:** Lecture 8 model (`transaction_cost_model.py`) at $1 billion AUM.
+
+This monthly extension differs from §7, which uses the daily `*_RAD.CSV` closes and a different shared baseline (trailing 12-month volatility with a 1% floor), so results are not directly comparable across the two sections.
+
+### `test_lookahead.py`
+
+Reruns the strategies on data truncated at June 1990, December 2014, and March 2020 and checks that every weight, volatility estimate, Lecture 8 cost, and no-trade-band holding path formed before each cut is identical to the full-sample run. It also checks the one-month execution lag. Run with `python -m unittest test_lookahead.py`.
+
+## 9. Covariance risk decomposition (R1)
+
+`baseline_risk_analysis.py` now also decomposes the adjusted baseline with EWMA (six-month half-life) and expanding covariance forecasts using the Euler decomposition (MCR = Σw/σ, CR = w × MCR, PCR = CR/σ; `risk_budgeting.euler_decomposition`). The diagonal outputs are unchanged.
+
+Over 1976–2014, the diagonal model predicts 6.8% portfolio volatility against 10.6% with EWMA covariance and 11.1% realized. With correlations included, commodities carry 53% of risk instead of 63%, equities 16% instead of 10%, and the effective number of independent instrument bets falls from about 40 to 17. Outputs: `diagonal_vs_covariance_class_risk.csv/.png` and `covariance_*` files in `outputs/baseline_risk_analysis_output/`.
+
+## 10. Hierarchical risk budgeting (R2)
+
+### `risk_budgeting.py` and `risk_budget_backtest.py`
+
+Each month, signs come from the 12-month signal and position sizes solve the Spinu convex risk-budgeting problem, so that every active asset class carries 1/K of ex-ante risk (25% when all four trade), split equally inside the class. The covariance is six-month EWMA. The portfolio is scaled to 10% predicted volatility, and gross exposure above 4x is cut proportionally. The script compares R2 with the baseline, E1, E3, covariance targeting, enhanced, and static strategies in-sample and out-of-sample.
+
+R2 equalizes ex-ante risk (OOS shares 25/25/25/25) and has the smallest in-sample drawdown, but the 4x cap binds in 75% of months and turnover is 26–34x a year. Net Sharpe at $1 billion is 0.77 IS and -0.10 OOS, versus 1.02 and -0.01 for enhanced. Results and the repository-wide look-ahead audit are in `outputs/risk_budget_output/risk_budget_report.md`.
+
+## 11. No-trade band (T1)
+
+### `cost_aware_rebalance.py`
+
+Simulates path-dependent holdings: each month, a drifted weight is traded only if it lies outside ±25% of the absolute target weight (`band_25`), and then only to the band edge. Sign flips, entries, and exits are always executed. The script also reports band_10 and partial-rebalancing variants and full metrics for every strategy in-sample, out-of-sample, and over the full sample.
+
+band_25 cuts in-sample turnover by 30–40% (enhanced 9.6x to 6.1x). In-sample net Sharpe is roughly unchanged for the 1/N and enhanced variants and rises for R2 (0.77 to 0.91). Enhanced + band_25 is the final configuration: net Sharpe 1.03 IS and 0.11 OOS, maximum drawdown -12.9% IS and -10.8% OOS. Results are in `outputs/cost_aware_rebalance_output/`.
+
+## 12. Execution timing on daily data (T3)
+
+### `alpha_decay_execution.py`
+
+Rebuilds the band_25 baseline, enhanced, and R2 portfolios on daily closes (1976–2014) and measures gross Sharpe by execution delay and net Sharpe by execution horizon at $100 million, $1 billion, and $10 billion. Alpha decays by about 0.05–0.06 Sharpe on the first day and about 0.01 per day afterwards. Starting the day after formation with the best horizon at $1 billion lowers in-sample net Sharpe from 0.85 to 0.76 (baseline), 1.03 to 0.95 (enhanced), and 0.91 to 0.84 (R2). Results are in `outputs/alpha_decay_output/`.
+
+### `project_summary.py`
+
+Writes the combined IS/OOS metric table (`summary_metrics.md/.csv`) and summary figure to `outputs/project_summary_output/`.
+
 ## Reproducible run order
 
 ### Part 1
@@ -323,8 +370,20 @@ python rebalance_frequency_out_of_sample.py --data-dir <RAD-data-directory>
 python rebalance_frequency_out_of_sample.py --half-short --data-dir <RAD-data-directory>
 ```
 
+With `MonthlyReturns_FullSample.xlsx` in the project root, reproduce §8–§12 with:
+
+```bash
+python baseline_risk_analysis.py   # requires baseline_performance_analysis.py outputs
+python risk_budget_backtest.py
+python cost_aware_rebalance.py
+python alpha_decay_execution.py
+python project_summary.py
+python -m unittest test_lookahead.py
+```
+
 ## Important assumptions and limitations
 
+- Execution timing (§8–§12): weights formed from month-t closes earn the whole month-t+1 return, so trades are assumed to fill at the same close used to compute the signal, while the Lecture 8 impact cost assumes 5-day execution. §12 shows a feasible schedule lowers in-sample net Sharpe by about 0.07–0.09; daily data end in 2014, so OOS figures cannot be adjusted directly. Treat these net Sharpe ratios as upper bounds by roughly this amount.
 - The two baselines rebalance monthly. Weekly and daily rebalancing appear only in the frequency enhancement.
 - Sharpe ratios generally assume a zero risk-free rate unless an excess-return regression is explicitly reported.
 - The original adjusted baseline assumes zero cross-instrument covariance; covariance-aware construction appears only in Part 2.
