@@ -20,7 +20,7 @@ from matplotlib.ticker import PercentFormatter
 from risk_budgeting import ROOT, OOS_START
 
 OUTPUTS = ROOT / "outputs"
-OUT = OUTPUTS / "project_summary_output"
+OUT = OUTPUTS / "risk_tcost_summary_output"
 CONFIGS = [  # (strategy, rule, label)
     ("baseline", "none", "Baseline"),
     ("enhanced", "none", "Enhanced"),
@@ -159,7 +159,7 @@ def figure(table):
     for a in axes.flat:
         a.grid(alpha=0.2)
     fig.tight_layout()
-    fig.savefig(OUT / "project_summary.png", dpi=150)
+    fig.savefig(OUT / "risk_tcost_summary.png", dpi=150)
     plt.close(fig)
 
 

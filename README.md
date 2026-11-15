@@ -323,9 +323,9 @@ band_25 cuts in-sample turnover by 30–40% (enhanced 9.6x to 6.1x). In-sample n
 
 Rebuilds the band_25 baseline, enhanced, and R2 portfolios on daily closes (1976–2014) and measures gross Sharpe by execution delay and net Sharpe by execution horizon at $100 million, $1 billion, and $10 billion. Alpha decays by about 0.05–0.06 Sharpe on the first day and about 0.01 per day afterwards. Starting the day after formation with the best horizon at $1 billion lowers in-sample net Sharpe from 0.85 to 0.76 (baseline), 1.03 to 0.95 (enhanced), and 0.91 to 0.84 (R2). Results are in `outputs/alpha_decay_output/`.
 
-### `project_summary.py`
+### `risk_tcost_summary.py`
 
-Writes the combined IS/OOS metric table (`summary_metrics.md/.csv`) and summary figure to `outputs/project_summary_output/`.
+Summarizes the risk-decomposition, risk-budgeting and transaction-cost work (§9–§12): an IS/OOS metric table for Baseline, Enhanced and R2 with and without the band_25 no-trade band (`summary_metrics.md/.csv`) and a six-panel figure (`risk_tcost_summary.png`) in `outputs/risk_tcost_summary_output/`.
 
 ## Reproducible run order
 
@@ -377,7 +377,7 @@ python baseline_risk_analysis.py   # requires baseline_performance_analysis.py o
 python risk_budget_backtest.py
 python cost_aware_rebalance.py
 python alpha_decay_execution.py
-python project_summary.py
+python risk_tcost_summary.py
 python -m unittest test_lookahead.py
 ```
 
