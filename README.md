@@ -152,6 +152,35 @@ Part 2 begins with the October 27 commit `24949b5`. Each subsection below descri
 
 ## Additional tradable futures factors
 
+A fixed **all-pre-2015 development / 2015–2025 test** alternative with no annual
+model retraining is implemented in `fixed_2015_holdout.py`; see
+[FIXED_HOLDOUT_REPORT.md](FIXED_HOLDOUT_REPORT.md). Models/shares are selected
+inside pre-2015 history, then the selected classifier is refit once on all
+eligible development labels and frozen. The later period remains already
+observed in this conversation, despite its chronological test designation.
+
+Annual **15/20-year rolling** sign-model refits are implemented in
+`rolling_sign_prediction.py` and documented in
+[ROLLING_WINDOW_REPORT.md](ROLLING_WINDOW_REPORT.md). Window/share selection
+uses 2000–2004 only; each annual fit uses strictly prior realized labels and
+refits preprocessing. Later-period return/Sharpe improve modestly over the
+frozen-1994 classifier, but remain weak and are not a new untouched holdout.
+
+Frozen January 2015–May 2025 evaluation using the supplied full-sample workbook
+is documented in [FULL_SAMPLE_OOS_REPORT.md](FULL_SAMPLE_OOS_REPORT.md). Run
+`out_of_sample_full_data.py --data data/MonthlyReturns_FullSample.xlsx`.
+It preserves original pre-2015 inputs, appends newer months, reproduces prior
+holdings and evaluates fixed TSMOM/factor/classifier configurations without OOS
+tuning. The earlier residual-momentum improvement does not generalize to this
+later period; all evaluated strategies have weak net OOS Sharpe.
+
+The binary next-month-return-sign experiment is in
+[SIGN_PREDICTION_REPORT.md](SIGN_PREDICTION_REPORT.md); run
+`sign_return_prediction.py`. It compares logistic regression, random forest,
+Extra Trees and gradient boosting, reports classification/probability metrics,
+and tests directional probability sleeves against original TSMOM and the prior
+residual-momentum overlay with the same native cost/risk rules.
+
 These experiments require Python with `numpy`, `pandas`, `matplotlib`,
 `scipy`, `statsmodels` and `scikit-learn` (tested with scikit-learn 1.7.1).
 To reproduce the latest experiment from a fresh checkout, first run
