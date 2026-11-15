@@ -148,7 +148,29 @@ The analysis includes raw and volatility-matched performance, rolling statistics
 
 # Part 2 — Implemented strategy enhancements
 
-Part 2 begins with the October 27 commit `24949b5`. Each subsection below describes an enhancement that has been implemented in code. All historical comparisons use an already studied sample and should be interpreted as descriptive rather than untouched out-of-sample evidence.
+Part 2 begins with the October 27 commit `24949b5`. Each subsection below describes an enhancement that has been implemented in code.
+
+### Data periods used by each enhancement
+
+The table distinguishes **in-sample (IS) design/training**, **validation**, and **out-of-sample (OOS) or later-period evaluation**. “No separate validation” means that the enhancement was examined on the same period used for its design; subperiod tables within that sample are robustness descriptions rather than a held-out validation exercise. Pre-1976 observations are used only to initialize momentum, volatility, and covariance estimates where needed, not to calculate reported strategy performance.
+
+| Part 2 enhancement | IS design or training period | Separate validation period | OOS or later-period evaluation |
+| --- | --- | --- | --- |
+| §1 Covariance-aware risk forecasting | January 1976–December 2014. Covariances are re-estimated causally using information available at each formation date. | No separate validation. The three- and 12-month subsequent-volatility tests are forecast evaluation inside the same 1976–2014 research sample. | None in `covariance_risk_validation.py`. |
+| §2 Portfolio volatility targeting and gross cap | January 1976–December 2014. The 10% target, 4x gross cap, and 2x scaling cap are evaluated on this period. | No separate validation. The 1976–1999 and 2000–2014 results are descriptive stability checks. | January 2015–May 2025 is later evaluated for the EWMA-covariance-target specification through §10. |
+| §3 EWMA-enhanced strategy and detailed costs | January 1976–December 2014. The EWMA volatility, covariance targeting, combined strategy, and cost comparisons are developed and compared here. | No separate validation. The 1976–1999 and 2000–2014 splits are descriptive. | January 2015–May 2025 is later evaluated for the combined enhanced strategy through §10. |
+| §4 Rebalance frequency | January 1976–December 2014. Monthly, weekly, and daily schedules are compared here. | No separate validation. The 1976–1989, 1990–1999, and 2000–2014 results are descriptive. | January 2015–May 2025 in `rebalance_frequency_out_of_sample.py`. The original frequency comparison is a later-period test; the half-short overlay is exploratory because it was chosen after examining the later data. |
+| §5 Fixed net- and gross-exposure controls | January 1976–December 2014. The 4x gross cap and ±1x net cap are first tested here. | No separate validation. | January 2015–May 2025 in `net_exposure_out_of_sample.py`, using the shared later-period price-trend baseline described in §7. |
+| §6 Economic-trend strategy | January 1980–December 1997 is used to select signal form, trade-theme sign, smoothing, class balancing, and blend weight. | January 1998–December 2014, with choices locked from the training period. | None completed because the required macro inputs and generated results are not committed. |
+| §7 Exposure smoothing | January 2015–May 2025 is used to develop and evaluate the smoothing rules. | None. | No clean OOS period. The reported later-sample result is exploratory because that same period informed the rule. |
+| §7 Short-budget rule | January 2015–May 2025 is used to compare short budgets and select the 50% short allocation. | No clean validation. The 1980–1997 and 1998–2014 tables are reverse-time historical robustness checks performed after selecting the rule. | No clean OOS period; January 2015–May 2025 is the selection sample, despite being later than the original baseline cutoff. |
+| §8 Monthly full-sample and look-ahead framework | January 1976–December 2014 is the common design/IS period for §8–§11. | The truncation dates June 1990, December 2014, and March 2020 are causal reproducibility tests, not validation samples. | January 2015–May 2025 is the common later evaluation period. |
+| §9 Covariance risk decomposition (R1) | January 1976–December 2014 diagnostic analysis. It changes the measurement of risk, not the strategy weights. | No separate validation. | None reported for the decomposition itself. |
+| §10 Hierarchical risk budgeting (R2) | January 1976–December 2014. Risk budgets, covariance choice, volatility target, and leverage cap are fixed from this research period. | No separate validation. | January 2015–May 2025, with no re-selection on that period. |
+| §11 No-trade band (T1) | January 1976–December 2014. `band_25` is selected using IS turnover and net-Sharpe comparisons only. | No separate validation. | January 2015–May 2025, excluded from rule selection. |
+| §12 Execution timing and alpha decay (T3) | January 1976–December 2014 using the original daily files. | No separate validation. | None; the implemented execution-timing study stops in December 2014. |
+
+The January 2015–May 2025 period is strategy-specific OOS for rules fixed before that period was examined. It is not a pristine repository-wide holdout because other project work had already analyzed those dates. Exposure smoothing, the short-budget rule, and the half-short frequency overlay should therefore be treated as exploratory rather than OOS evidence.
 
 ## 1. Covariance-aware risk forecasting
 
