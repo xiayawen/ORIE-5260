@@ -1,0 +1,66 @@
+{
+  "selected": [
+    "NearWealthHigh_12m",
+    "MedianReturn_12m",
+    "TSMOM",
+    "TrendEfficiency_12m",
+    "MildWorstReturn_12m",
+    "ShallowDrawdown_12m"
+  ],
+  "feature_sets": {
+    "MomOnly": [
+      "XSMOM_12_1",
+      "class_COMM",
+      "class_EQ",
+      "class_FI",
+      "class_FX"
+    ],
+    "Selected": [
+      "NearWealthHigh_12m",
+      "MedianReturn_12m",
+      "TSMOM",
+      "TrendEfficiency_12m",
+      "MildWorstReturn_12m",
+      "ShallowDrawdown_12m",
+      "class_COMM",
+      "class_EQ",
+      "class_FI",
+      "class_FX"
+    ],
+    "AllFactors": [
+      "TSMOM",
+      "Reversal_1m",
+      "LowVol_12m",
+      "LowDownside_12m",
+      "XSMOM_12_1",
+      "Reversal_3m",
+      "LongReversal_36_12",
+      "NegativeSkew_12m",
+      "LowKurtosis_12m",
+      "LowMaxReturn_12m",
+      "MildWorstReturn_12m",
+      "LowTailLoss_12m",
+      "LowUpsideRisk_12m",
+      "RiskAsymmetry_12m",
+      "VolCompression_3_12",
+      "LowVolOfVol_12m",
+      "ReturnPersistence_12m",
+      "Seasonality_5y",
+      "TrendEfficiency_12m",
+      "TrendAcceleration_3m",
+      "MeanToVol_12m",
+      "NearWealthHigh_12m",
+      "ShallowDrawdown_12m",
+      "PositiveMonthShare_12m",
+      "MedianReturn_12m",
+      "class_COMM",
+      "class_EQ",
+      "class_FI",
+      "class_FX"
+    ]
+  },
+  "validation_winner": "AllFactors",
+  "rule": "positive mean, HAC3 t>=1, abs rank corr<0.8, max six; train only",
+  "model": "RF depth6 leaf30 trees200 seed5260; unchanged across sets",
+  "warning": "2005 onward previously inspected; development comparison only"
+}

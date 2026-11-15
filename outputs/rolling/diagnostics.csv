@@ -1,0 +1,5 @@
+strategy,missing_held_instrument_months,max_gross_exposure
+matched_full_sample_tsmom,10,4.7181910432477245
+matched_full_sample_static,10,4.718191043247725
+rolling_tsmom,10,29.74503313482239
+rolling_static,10,29.74503313482239

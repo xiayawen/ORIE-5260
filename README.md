@@ -152,6 +152,13 @@ Part 2 begins with the October 27 commit `24949b5`. Each subsection below descri
 
 ## Additional tradable futures factors
 
+Ten cross-asset exposure/lag-response candidates are evaluated in
+`cross_asset_factor_research.py`; see
+[CROSS_ASSET_FACTOR_REPORT.md](CROSS_ASSET_FACTOR_REPORT.md). They use complete
+monthly data, with train-only direct-signal screening and a fixed Extra Trees
+feature-set comparison. The new features yield only a small later-period gain
+and do not beat the existing feature set on validation portfolio Sharpe.
+
 A fixed **all-pre-2015 development / 2015–2025 test** alternative with no annual
 model retraining is implemented in `fixed_2015_holdout.py`; see
 [FIXED_HOLDOUT_REPORT.md](FIXED_HOLDOUT_REPORT.md). Models/shares are selected

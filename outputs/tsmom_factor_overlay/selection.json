@@ -1,0 +1,19 @@
+{
+  "selected": "TSMOM_NegativeSkew_12m_20pct",
+  "configuration": {
+    "overlay": "NegativeSkew_12m",
+    "fraction": 0.2
+  },
+  "candidates": [
+    "MildWorstReturn_12m",
+    "LowDownside_12m",
+    "ShallowDrawdown_12m",
+    "LowTailLoss_12m",
+    "LowVol_12m",
+    "LowKurtosis_12m",
+    "NegativeSkew_12m"
+  ],
+  "selection": "1995\u20132004 net Sharpe; original and rescaled-only controls included",
+  "methodology": "economic_trend.py native baseline, sleeve scaling, blend scaling and backtest",
+  "warning": "2005\u20132014 previously inspected; full period includes development; not a new holdout"
+}
