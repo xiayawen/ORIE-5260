@@ -150,6 +150,8 @@ The analysis includes raw and volatility-matched performance, rolling statistics
 
 Part 2 begins with the October 27 commit `24949b5`. Each subsection below describes an enhancement that has been implemented in code.
 
+The turning-point enhancement uses **Method 1 plus macro confirmation**. Exploratory alternatives are retained locally under Git-ignored sensitivity folders; the active repository presents one final five-strategy comparison.
+
 ## Additional tradable futures factors
 
 Ten cross-asset exposure/lag-response candidates are evaluated in
@@ -304,10 +306,7 @@ The table distinguishes **in-sample (IS) design/training**, **validation**, and 
 | §10 Hierarchical risk budgeting (R2) | January 1976–December 2014. Risk budgets, covariance choice, volatility target, and leverage cap are fixed from this research period. | No separate validation. | January 2015–May 2025, with no re-selection on that period. |
 | §11 No-trade band (T1) | January 1976–December 2014. `band_25` is selected using IS turnover and net-Sharpe comparisons only. | No separate validation. | January 2015–May 2025, excluded from rule selection. |
 | §12 Execution timing and alpha decay (T3) | January 1976–December 2014 using the original daily files. | No separate validation. | None; the implemented execution-timing study stops in December 2014. |
-| §13 Turning-point Method 1 | January 1976–December 1997 selects the binary exposure-reduction parameter. | January 1998–December 2014 with the selected parameter locked. | January 2015–May 2025, labelled a forward-style later evaluation rather than a pristine repository-wide holdout. |
-| §14 Turning-point Method 2 GP-CPD pilot | Each expanding fold uses all available labels through 1997, 2002, 2007, or 2012. GP features themselves use only the trailing 63 daily returns at each month-end. | Prediction blocks are 1998–2002, 2003–2007, 2008–2012, and 2013–2014. The prespecified phase gate uses only these blocks. | The final predictive models are refit through 2014 and evaluated over January 2015–May 2025; this block does not affect the gate. |
-| §15 Continuous trend acceleration | January 1976–December 1997 selects the exposure-response parameter from a fixed grid. | January 1998–December 2014 with the selected parameter and training-defined severity thresholds locked. | January 2015–May 2025, used only as a later evaluation block. |
-| §13/§15 Macro confirmation | The original Method 1 and acceleration parameters remain fixed; no new parameter is selected. Results begin in January 1980 when all five economic themes are available. | January 1998–December 2014, with the existing three-month smoothing and confirmation rule unchanged. | January 2015–May 2025, with no retuning. |
+| §13 Turning point model | January 1980–December 1997 is the training and specification period. The Method 1 reduction is fixed at 50%, and macro mappings use the existing five themes. | January 1998–December 2014, with the disagreement rule, volatility-targeted baseline, and macro gates fixed. | January 2015–May 2025 is holdout testing and is not used to choose the final rule. |
 
 The January 2015–May 2025 period is strategy-specific OOS for rules fixed before that period was examined. It is not a pristine repository-wide holdout because other project work had already analyzed those dates. Exposure smoothing, the short-budget rule, and the half-short frequency overlay should therefore be treated as exploratory rather than OOS evidence.
 
@@ -488,31 +487,32 @@ Rebuilds the band_25 baseline, enhanced, and R2 portfolios on daily closes (1976
 
 Summarizes the risk-decomposition, risk-budgeting and transaction-cost work (§9–§12): an IS/OOS metric table for Baseline, Enhanced and R2 with and without the band_25 no-trade band (`summary_metrics.md/.csv`) and a six-panel figure (`risk_tcost_summary.png`) in `outputs/risk_tcost_summary_output/`.
 
-## 13. Turning-point Method 1
+## 13. Turning point model
 
-### `turning_point_model/method1_rule_based.py`
+### `turning_point_model/final_model.py`
 
-Tests whether halving adjusted-baseline positions when two- and 12-month momentum disagree improves performance. The 50% reduction selected on 1976–1997 does not generalize: at 10 bps, annual incremental return is -1.54% in 1998–2014 and -1.17% in 2015–2025. Gross/net decomposition shows that Method 1 already underperforms before costs in both later blocks, while entering and leaving disagreement adds turnover. Disagreement duration does not produce a stable next-month payoff pattern. Results are in `outputs/enhance_turning_point/`.
+The final experiment starts from the volatility-targeted price baseline: 12-month price momentum, inverse trailing 12-month instrument volatility with a 1% floor, and trailing 36-month portfolio scaling toward 10% annual volatility. Positions formed at month-end execute in the following month.
 
-With `--macro-confirmation`, the same fixed 50% reduction is applied only when the existing five-theme economic composite opposes the 12-month baseline direction. This filter improves Method 1 relative to the unfiltered rule: at 10 bps, the annual return difference is +1.03% in validation and +1.31% later. Relative to the adjusted baseline, however, the macro-confirmed rule is -0.51% in validation and +0.14% later, with neither increment statistically reliable. The filter mostly removes harmful interventions rather than adding a new return source. Results are in `outputs/enhance_turning_point/method1_rule_based/macro_confirmation/`.
+**Method 1** identifies a potential turning point when the two-month momentum direction disagrees with the 12-month baseline direction. The unfiltered rule reduces the affected position by 50%. Because many disagreements are temporary corrections rather than damaging reversals, this rule can give up profitable exposure and increase turnover.
 
-## 14. Turning-point Method 2 GP-CPD pilot
+Two macro extensions test whether the five existing themes—growth, inflation, trade, monetary policy, and risk aversion—can filter those false alarms:
 
-### `turning_point_model/gp_changepoint.py` and `turning_point_model/method2_gp_cpd.py`
+- **Majority macro vote:** reduce the position only when more than half of the available mapped themes oppose the baseline direction.
+- **4-of-5 macro vote:** reduce the position only when at least four themes oppose. The 50% reduction is unchanged, so the comparison isolates the stricter confirmation rule.
 
-Fits a causal stationary Matérn-3/2 GP and smooth two-region changepoint GP to trailing 63-day daily returns for one fixed representative future per asset class. Three fixed Ridge/logistic models test whether CPD severity and location improve next-month signed-payoff or downside-loss forecasts beyond disagreement, momentum strength, volatility, and instrument controls.
+The table reports results after a common 10 bps turnover cost. Incremental returns are measured against the volatility-targeted baseline.
 
-The pilot generates finite scores for all 2,056 requested instrument-months, although formal optimizer convergence is 84.9%, below the prespecified 90% reliability threshold. CPD features do not pass either predictive gate: high severity corresponds to weaker payoff and higher loss frequency in only one of four historical folds, and downside log loss does not improve consistently. The experiment therefore stops before a CPD trading overlay. See `outputs/enhance_turning_point/method2_gp_cpd/method2_report.md`.
+| Strategy | Validation Sharpe, 1998–2014 | Holdout Sharpe, 2015–2025 | Validation annual increment | Holdout annual increment |
+| --- | ---: | ---: | ---: | ---: |
+| Adjusted baseline | 0.787 | -0.144 | -1.39% | -1.31% |
+| Volatility-targeted baseline | 1.044 | -0.027 | Reference | Reference |
+| Volatility-targeted + unfiltered Method 1 | 0.951 | -0.131 | -1.76% | -0.91% |
+| Method 1 + majority macro vote | 1.021 | -0.010 | -0.28% | +0.18% |
+| **Method 1 + 4-of-5 macro vote** | **1.057** | **-0.013** | **+0.10%** | **+0.15%** |
 
-## 15. Continuous trend acceleration
+The unfiltered rule performs materially worse than volatility targeting alone, confirming that disagreement by itself is too broad a turning-point signal. Macro confirmation removes many harmful interventions. The stricter 4-of-5 rule is the preferred tested specification because it produces small positive increments in both validation and holdout testing and outperforms the ordinary majority vote in validation. However, its HAC confidence intervals versus the volatility-targeted baseline include zero, so it is a modest robustness enhancement rather than a proven source of incremental return.
 
-### `turning_point_model/trend_acceleration.py`
-
-Tests a continuous alternative to Method 1's binary disagreement rule. Two- and 12-month momentum are expressed as average monthly returns divided by the same causal expanding volatility estimate. Their difference is oriented relative to the 12-month baseline position, so a positive adverse-acceleration score means that recent returns are moving against the existing trend. A bounded severity score then reduces the adjusted-baseline position proportionally rather than treating every disagreement identically.
-
-The exposure-response parameter is selected only on 1976–1997. The selected full-response rule improves training Sharpe from 1.000 to 1.068 at 10 bps, but Sharpe falls from 0.787 to 0.710 in validation and from -0.144 to -0.342 in the later period. The most severe acceleration quartile has lower next-month signed baseline payoff than the mildest quartile in all three periods, but the difference is statistically reliable only in training and weakens thereafter. Higher turnover and the opportunity cost of reducing positions with positive subsequent payoff outweigh the risk reduction. Results are in `outputs/enhance_turning_point/trend_acceleration/`.
-
-The optional macro-confirmation switch retains acceleration severity only when the economic composite opposes the baseline direction. It improves annual return relative to unfiltered acceleration by +1.24% in validation and +1.48% later at 10 bps. It remains -0.65% below the baseline in validation and -0.05% later, and the HAC intervals include zero. Results are in `outputs/enhance_turning_point/trend_acceleration/macro_confirmation/`.
+Run the experiment through `turning_point_model/run_experiments.py`. The methodology, period-labelled graph, full performance table, and HAC tests are summarized in [`outputs/enhance_turning_point/TURNING_POINT_MODEL.md`](outputs/enhance_turning_point/TURNING_POINT_MODEL.md). Exploratory variants are retained locally under Git-ignored `sensitivity/` folders.
 
 ## Reproducible run order
 
@@ -543,12 +543,8 @@ python rebalance_frequency_backtest.py
 python net_exposure_backtest.py
 python -m unittest test_portfolio_volatility_targeting.py
 python -m unittest test_transaction_cost_model.py
-python -m turning_point_model.run_experiments --method method1 --returns MonthlyReturns_FullSample.xlsx
-python -m turning_point_model.run_experiments --method method1 --returns MonthlyReturns_FullSample.xlsx --macro-confirmation --macro-dir macro_data
-python -m turning_point_model.run_experiments --method method2 --returns MonthlyReturns_FullSample.xlsx --daily-zip FuturesUnderlyingData_FullSample.zip
-python -m turning_point_model.run_experiments --method trend_acceleration --returns MonthlyReturns_FullSample.xlsx
-python -m turning_point_model.run_experiments --method trend_acceleration --returns MonthlyReturns_FullSample.xlsx --macro-confirmation --macro-dir macro_data
-python -m unittest turning_point_model.tests.test_method1 turning_point_model.tests.test_method2 turning_point_model.tests.test_trend_acceleration turning_point_model.tests.test_macro_confirmation
+python -m turning_point_model.run_experiments --returns MonthlyReturns_FullSample.xlsx --macro-dir macro_data
+python -m unittest discover -s turning_point_model/tests -p 'test_*.py'
 ```
 
 The economic-trend scripts are excluded from the reproducible sequence because their macro input files are not committed.

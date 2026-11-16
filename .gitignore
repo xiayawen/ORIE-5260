@@ -7,3 +7,10 @@ venv/
 .env.*
 !.env.example
 .ipynb_checkpoints/
+/macro_data
+
+# Turning-point sensitivity and retired experiments are retained locally but
+# excluded from the final model committed to the repository.
+/turning_point_model/sensitivity/
+/outputs/enhance_turning_point/sensitivity/
+/outputs/turning_point_macro_ml/
