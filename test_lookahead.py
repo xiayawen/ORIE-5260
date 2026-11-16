@@ -80,11 +80,12 @@ class CombinedStrategyTruncation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import json
-        from combined_strategy import Pipeline, ALL_COMPONENTS, OUT
+        from combined_strategy import Pipeline, ALL_COMPONENTS, ALL_COMPONENTS_CONTINUOUS, OUT
         cls.Pipeline = Pipeline
         cls.returns, cls.asset_map = read_full_sample_returns(), read_asset_map()
         selected = json.loads((OUT / "selected_components.json").read_text())["selected"]
-        cls.configs = {"final": frozenset(selected), "all_components": ALL_COMPONENTS}
+        cls.configs = {"final": frozenset(selected), "all_components": ALL_COMPONENTS,
+                       "all_components_continuous": ALL_COMPONENTS_CONTINUOUS}
         cls.full = Pipeline(cls.returns, cls.asset_map)
 
     def test_combined_pipeline_is_truncation_invariant(self):
@@ -107,6 +108,9 @@ class CombinedStrategyTruncation(unittest.TestCase):
                                                    self.full.executed(config).loc[idx].to_numpy(), atol=1e-10)
                         np.testing.assert_allclose(short.run(config).to_numpy(),
                                                    self.full.run(config).loc[idx].to_numpy(), atol=1e-10)
+                with self.subTest(cut=cut, config="slide_baseline"):
+                    np.testing.assert_allclose(short.slide_baseline().to_numpy(),
+                                               self.full.slide_baseline().loc[short.r.index].to_numpy(), atol=1e-10)
                 with self.subTest(cut=cut, config="walk_forward_clean"):
                     from combined_strategy import walk_forward, CLEAN_POOL
                     _, short_exec, short_dec = walk_forward(short, CLEAN_POOL)

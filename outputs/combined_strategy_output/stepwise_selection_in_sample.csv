@@ -1,6 +1,7 @@
 round,candidate,is_net_sharpe,delta_vs_current,best_in_round,accepted,combination
 0,(start: enhanced),1.0206922962380975,0.0,True,True,enhanced
-1,half_short,1.0898060004512438,0.06911370421314622,True,True,enhanced + half_short
+1,continuous_signal,1.1003485579812486,0.0796562617431511,True,True,enhanced + continuous_signal
+1,half_short,1.0898060004512438,0.06911370421314622,False,False,enhanced + half_short
 1,smooth_leverage,1.0498910615345391,0.02919876529644161,False,False,enhanced + smooth_leverage
 1,smooth_leverage_imbalance,1.0356621923258116,0.01496989608771404,False,False,enhanced + smooth_leverage_imbalance
 1,band_25,1.0333701366815398,0.012677840443442223,False,False,enhanced + band_25
@@ -10,12 +11,12 @@ round,candidate,is_net_sharpe,delta_vs_current,best_in_round,accepted,combinatio
 1,factor_overlay,0.9499995775667174,-0.07069271867138016,False,False,enhanced + factor_overlay
 1,net_cap,0.9138246081276924,-0.10686768811040515,False,False,enhanced + net_cap
 1,risk_budget,0.7708218408560147,-0.24987045538208286,False,False,enhanced + risk_budget
-2,smooth_leverage,1.0994820185791043,0.009676018127860564,True,False,enhanced + half_short + smooth_leverage
-2,turning_point,1.0975471859163415,0.007741185465097722,False,False,enhanced + turning_point + half_short
-2,economic_trend,1.0924799471796203,0.0026739467283765084,False,False,enhanced + economic_trend + half_short
-2,smooth_leverage_imbalance,1.0907001957432392,0.0008941952919954144,False,False,enhanced + half_short + smooth_leverage_imbalance
-2,histgb_overlay,1.0861539078232403,-0.0036520926280034782,False,False,enhanced + half_short + histgb_overlay
-2,band_25,1.0721614348592992,-0.017644565591944605,False,False,enhanced + half_short + band_25
-2,factor_overlay,1.038161702660578,-0.051644297790665705,False,False,enhanced + factor_overlay + half_short
-2,net_cap,0.9700347358837929,-0.11977126456745091,False,False,enhanced + half_short + net_cap
-2,risk_budget,0.8330441075179091,-0.2567618929333346,False,False,enhanced + risk_budget + half_short
+2,half_short,1.140247263275449,0.039898705294200365,True,False,enhanced + half_short + continuous_signal
+2,economic_trend,1.1206116689311318,0.0202631109498832,False,False,enhanced + economic_trend + continuous_signal
+2,turning_point,1.1050817644755329,0.0047332064942842145,False,False,enhanced + turning_point + continuous_signal
+2,smooth_leverage,1.1043464460001615,0.003997888018912876,False,False,enhanced + smooth_leverage + continuous_signal
+2,histgb_overlay,1.0845505532742348,-0.01579800470701387,False,False,enhanced + histgb_overlay + continuous_signal
+2,smooth_leverage_imbalance,1.051431756228037,-0.04891680175321156,False,False,enhanced + smooth_leverage_imbalance + continuous_signal
+2,band_25,1.0419654016537765,-0.05838315632747215,False,False,enhanced + band_25 + continuous_signal
+2,factor_overlay,1.0389719906708965,-0.061376567310352126,False,False,enhanced + factor_overlay + continuous_signal
+2,net_cap,0.9873174249559099,-0.11303113302533874,False,False,enhanced + net_cap + continuous_signal
