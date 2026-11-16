@@ -72,5 +72,42 @@ class TruncationInvariance(unittest.TestCase):
             np.testing.assert_allclose(executed.iloc[1:].to_numpy(), formed.iloc[:-1].fillna(0).to_numpy())
 
 
+class CombinedStrategyTruncation(unittest.TestCase):
+    """combined_strategy.py: returns AND macro files cut at each date must not change any earlier
+    formation weight, executed weight or Lecture 8 cost. Covers every candidate component (the
+    all-components configuration) and the selected final combination."""
+
+    @classmethod
+    def setUpClass(cls):
+        import json
+        from combined_strategy import Pipeline, ALL_COMPONENTS, OUT
+        cls.Pipeline = Pipeline
+        cls.returns, cls.asset_map = read_full_sample_returns(), read_asset_map()
+        selected = json.loads((OUT / "selected_components.json").read_text())["selected"]
+        cls.configs = {"final": frozenset(selected), "all_components": ALL_COMPONENTS}
+        cls.full = Pipeline(cls.returns, cls.asset_map)
+
+    def test_combined_pipeline_is_truncation_invariant(self):
+        import tempfile
+        from pathlib import Path
+        import pandas as pd
+        from combined_strategy import MACRO_DIR
+        for cut in CUTS:
+            with tempfile.TemporaryDirectory() as tmp:
+                for path in MACRO_DIR.glob("*.csv"):  # macro data as it existed up to the cut
+                    frame = pd.read_csv(path)
+                    frame[pd.to_datetime(frame.iloc[:, 0]) <= pd.Timestamp(cut)].to_csv(Path(tmp) / path.name, index=False)
+                short = self.Pipeline(self.returns.loc[:cut], self.asset_map, Path(tmp))
+                for name, config in self.configs.items():
+                    with self.subTest(cut=cut, config=name):
+                        idx = short.r.index
+                        np.testing.assert_allclose(short.formed(config).to_numpy(),
+                                                   self.full.formed(config).loc[idx].to_numpy(), atol=1e-10)
+                        np.testing.assert_allclose(short.executed(config).to_numpy(),
+                                                   self.full.executed(config).loc[idx].to_numpy(), atol=1e-10)
+                        np.testing.assert_allclose(short.run(config).to_numpy(),
+                                                   self.full.run(config).loc[idx].to_numpy(), atol=1e-10)
+
+
 if __name__ == "__main__":
     unittest.main()

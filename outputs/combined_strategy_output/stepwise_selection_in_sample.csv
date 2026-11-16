@@ -1,0 +1,19 @@
+round,candidate,is_net_sharpe,delta_vs_current,best_in_round,accepted,combination
+0,(start: enhanced),1.0206922962380975,0.0,True,True,enhanced
+1,half_short,1.0898060004512438,0.06911370421314622,True,True,enhanced + half_short
+1,smooth_leverage,1.0498910615345391,0.02919876529644161,False,False,enhanced + smooth_leverage
+1,smooth_leverage_imbalance,1.0356621923258116,0.01496989608771404,False,False,enhanced + smooth_leverage_imbalance
+1,band_25,1.0333701366815398,0.012677840443442223,False,False,enhanced + band_25
+1,economic_trend,1.0316259609975502,0.010933664759452677,False,False,enhanced + economic_trend
+1,turning_point,1.0312205728943704,0.010528276656272872,False,False,enhanced + turning_point
+1,factor_overlay,0.9499995775667174,-0.07069271867138016,False,False,enhanced + factor_overlay
+1,net_cap,0.9138246081276924,-0.10686768811040515,False,False,enhanced + net_cap
+1,risk_budget,0.7708218408560147,-0.24987045538208286,False,False,enhanced + risk_budget
+2,smooth_leverage,1.0994820185791043,0.009676018127860564,True,False,enhanced + half_short + smooth_leverage
+2,turning_point,1.0975471859163415,0.007741185465097722,False,False,enhanced + turning_point + half_short
+2,economic_trend,1.0924799471796203,0.0026739467283765084,False,False,enhanced + economic_trend + half_short
+2,smooth_leverage_imbalance,1.0907001957432392,0.0008941952919954144,False,False,enhanced + half_short + smooth_leverage_imbalance
+2,band_25,1.0721614348592992,-0.017644565591944605,False,False,enhanced + half_short + band_25
+2,factor_overlay,1.038161702660578,-0.051644297790665705,False,False,enhanced + factor_overlay + half_short
+2,net_cap,0.9700347358837929,-0.11977126456745091,False,False,enhanced + half_short + net_cap
+2,risk_budget,0.8330441075179091,-0.2567618929333346,False,False,enhanced + risk_budget + half_short
