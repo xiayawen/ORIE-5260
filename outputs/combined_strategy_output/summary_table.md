@@ -130,7 +130,9 @@ equity-market exposure, which works against trend-following's role as crisis pro
 **What it is.** The continuous-signal strategy with every compatible candidate that was designed
 before 2015 switched on at once: economic-trend, factor and HistGB sleeves, turning-point reduction,
 net-exposure cap and the no-trade band. Half-short and the smoothing rules are left out because they were
-designed after seeing 2015-2025 data.
+designed after seeing 2015-2025 data. With all three sleeves active (from 1997, when HistGB starts) the trend
+core is only 30% of the mix (economic trend 20%, factor 20%, HistGB 30%); before 1997 it is 60%. The
+turning-point cut and the net cap then remove exposure after the mix is re-targeted to 10%.
 
 **Why it is exploratory.** It is clearly worse in-sample (0.93 vs 1.13 Sharpe), a gap large enough to be a real
 result rather than noise. Its higher out-of-sample Sharpe comes from lower risk, not more return: the overlays
