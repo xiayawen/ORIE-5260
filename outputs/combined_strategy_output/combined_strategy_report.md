@@ -1,14 +1,39 @@
 # Combined strategy: in-sample selection, out-of-sample evaluation
 
-**Final combination:** `enhanced + continuous_signal`.
+**Final combination:** `enhanced + continuous_signal`. All numbers are net of Lecture 11: 2 bps + 4 rolls/yr (Lecture 11
+slides 17-19, exact turnover formula) unless stated; Lecture 8 model, $1bn is in
+`cost_convention_comparison.md`.
+
+## Baseline alignment (Lecture 11 slides 21 and 30)
+
+`Baseline` = Lecture 11 replica: binary 12-month signal, 1/(12-month vol)/N with no floor, 10% target on
+the trailing 36-month realized strategy vol, no leverage cap, monthly rebalance. A literal 11% ex-ante target on
+our monthly EWMA-covariance forecast (`slide_baseline_exante`) was also tried: IS vol 12.5%, turnover 21.8,
+leverage 5.75, i.e. further from slide 21 than this replica, which matches slide-21 turnover (13.42) exactly.
+The replica was chosen on that IS match, after both versions' OOS results had been seen. Slide 30 uses daily data
+(21-business-day returns) and ends Jun 2025; we use monthly returns through May 2025, so OOS levels are
+not expected to match exactly.
+
+| | Slide 21 IS | Baseline IS | Final IS | Slide 30 OOS | Baseline OOS | Final OOS |
+|---|---:|---:|---:|---:|---:|---:|
+| Avg net return | 11.1% | 12.1% | 11.4% | 3.0% | 0.8% | 0.9% |
+| Std | 9.9% | 10.2% | 10.1% | 9.5% | 10.6% | 7.5% |
+| Sharpe | 1.13 | 1.18 | 1.13 | 0.31 | 0.08 | 0.12 |
+| Turnover | 13.42 | 13.42 | 10.84 | 30.46 | 28.55 | 15.30 |
+| T-costs | 0.59% | 0.63% | 0.45% | — | 1.30% | 0.60% |
+| Leverage | 4.00 | 4.55 | 2.92 | 7.94 | 9.17 | 3.69 |
+| #Names | 39.5 | 41.9 | 39.6 | 56.3 | 56.1 | 56.1 |
+| Imbalance | 1.30 | 1.49 | 0.93 | 2.70 | 3.98 | 0.88 |
+
+![S&P 500 smile](sp500_smile.png)
 
 ## Protocol
 
 - In-sample (IS) = Jan 1976 - Dec 2014; out-of-sample (OOS) = Jan 2015 - May 2025
   (`MonthlyReturns_FullSample.xlsx`).
 - Forward stepwise from `enhanced`: each round adds the candidate with the highest IS net Sharpe if it
-  improves the current IS net Sharpe by at least 0.05. Net = Lecture 8 cost model
-  (`transaction_cost_model.py`) at $1bn, 5-day impact, drift-adjusted turnover.
+  improves the current IS net Sharpe by at least 0.05. Net = Lecture 11: 2 bps + 4 rolls/yr. An earlier
+  run selected with the Lecture 8 model at $1bn and chose the same combination.
 - The selection ran on returns truncated at Dec 2014, so no 2015+ value was available to it. The OOS run
   was done once afterwards; the script asserts the IS numbers are identical with and without 2015+ data.
 - All component parameters are those fixed in their original scripts on pre-2015 data; nothing was tuned
@@ -20,8 +45,9 @@
 - `continuous_signal` (Lecture 11 slide 24) was added as a candidate after the OOS results of the other
   components had been seen, prompted by the gap to the Lecture 11 baseline. Its specification
   (clip(12-month return / annual EWMA vol, -1, 1), one variant, no grid) was fixed before it was run.
-- `slide_baseline` replicates the Lecture 11 baseline for comparison; see `cost_convention_comparison.md`
-  for all strategies under both the Lecture 8 ($1bn) and the Lecture 11 (2 bps) cost conventions.
+- Three baselines are reported: `slide_baseline` (official, Lecture 11 replica), `slide_baseline_exante`
+  (literal 11% ex-ante reading) and `baseline` (Lecture 6 course baseline from the midterm: expanding vol,
+  40%/vol, 1/N, no portfolio target).
 - Rebalance frequency was not a candidate: weekly/daily trading needs daily closes after 2014, which are
   not available here, so it cannot be tested out of sample.
 
@@ -29,53 +55,56 @@
 
 | Round | Candidate | IS net Sharpe | Change vs current | Added |
 |---:|---|---:|---:|:---:|
-| 0 | (start: enhanced) | 1.021 | +0.000 |  |
-| 1 | continuous_signal | 1.100 | +0.080 | yes |
-| 1 | half_short | 1.090 | +0.069 |  |
-| 1 | smooth_leverage | 1.050 | +0.029 |  |
-| 1 | smooth_leverage_imbalance | 1.036 | +0.015 |  |
-| 1 | band_25 | 1.033 | +0.013 |  |
-| 1 | economic_trend | 1.032 | +0.011 |  |
-| 1 | turning_point | 1.031 | +0.011 |  |
-| 1 | histgb_overlay | 1.021 | +0.000 |  |
-| 1 | factor_overlay | 0.950 | -0.071 |  |
-| 1 | net_cap | 0.914 | -0.107 |  |
-| 1 | risk_budget | 0.771 | -0.250 |  |
-| 2 | half_short | 1.140 | +0.040 |  |
-| 2 | economic_trend | 1.121 | +0.020 |  |
-| 2 | turning_point | 1.105 | +0.005 |  |
-| 2 | smooth_leverage | 1.104 | +0.004 |  |
-| 2 | histgb_overlay | 1.085 | -0.016 |  |
-| 2 | smooth_leverage_imbalance | 1.051 | -0.049 |  |
-| 2 | band_25 | 1.042 | -0.058 |  |
-| 2 | factor_overlay | 1.039 | -0.061 |  |
-| 2 | net_cap | 0.987 | -0.113 |  |
+| 0 | (start: enhanced) | 1.068 | +0.000 |  |
+| 1 | continuous_signal | 1.128 | +0.060 | yes |
+| 1 | half_short | 1.123 | +0.055 |  |
+| 1 | smooth_leverage | 1.093 | +0.025 |  |
+| 1 | smooth_leverage_imbalance | 1.081 | +0.014 |  |
+| 1 | turning_point | 1.079 | +0.011 |  |
+| 1 | economic_trend | 1.078 | +0.011 |  |
+| 1 | histgb_overlay | 1.068 | +0.000 |  |
+| 1 | band_25 | 1.064 | -0.003 |  |
+| 1 | factor_overlay | 1.012 | -0.056 |  |
+| 1 | net_cap | 0.964 | -0.104 |  |
+| 1 | risk_budget | 0.922 | -0.145 |  |
+| 2 | half_short | 1.159 | +0.031 |  |
+| 2 | economic_trend | 1.148 | +0.020 |  |
+| 2 | turning_point | 1.133 | +0.006 |  |
+| 2 | smooth_leverage | 1.131 | +0.003 |  |
+| 2 | histgb_overlay | 1.113 | -0.015 |  |
+| 2 | smooth_leverage_imbalance | 1.079 | -0.049 |  |
+| 2 | factor_overlay | 1.076 | -0.051 |  |
+| 2 | band_25 | 1.057 | -0.071 |  |
+| 2 | net_cap | 1.018 | -0.109 |  |
 
 Sharpe standard errors are about 0.19 over 39 IS years, so a 0.05 step is not statistically significant
 on its own; the threshold only guards against adding near-zero improvements.
 
-## In-sample vs out-of-sample (net of Lecture 8 costs at $1bn unless labelled gross)
+## In-sample vs out-of-sample (net of Lecture 11: 2 bps + 4 rolls/yr unless labelled gross)
 
-Rows other than `baseline`, `enhanced` and `final` are `enhanced` plus that one component.
-Turnover is annual drift-adjusted traded notional (x NAV).
+Rows other than the baselines, `enhanced`, `final` and the sensitivity row are `enhanced` plus that one
+component. Turnover is annual traded notional (x NAV); leverage = average gross exposure; imbalance = average
+net long; names = average number of positions.
 
-| Strategy | IS Net CAGR | OOS Net CAGR | IS Gross ret | OOS Gross ret | IS Net ret | OOS Net ret | IS Vol | OOS Vol | IS Sharpe | OOS Sharpe | IS Max DD | OOS Max DD | IS Turnover | OOS Turnover | IS Cost drag | OOS Cost drag |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| baseline | 9.68% | -1.64% | 10.77% | -0.26% | 9.89% | -1.04% | 11.13% | 11.07% | 0.89 | -0.09 | -26.2% | -33.1% | 8.3 | 13.3 | 0.88% | 0.78% |
-| slide_baseline | 11.81% | 0.32% | 12.76% | 2.12% | 11.74% | 0.88% | 10.24% | 10.63% | 1.15 | 0.08 | -13.4% | -22.2% | 13.7 | 29.1 | 1.03% | 1.24% |
-| enhanced | 9.59% | -0.33% | 10.53% | 0.52% | 9.63% | -0.09% | 9.44% | 7.06% | 1.02 | -0.01 | -14.2% | -15.0% | 9.6 | 12.8 | 0.90% | 0.60% |
-| risk_budget | 7.82% | -0.65% | 10.54% | 1.04% | 8.10% | -0.51% | 10.51% | 5.34% | 0.77 | -0.10 | -13.1% | -15.5% | 25.6 | 33.9 | 2.44% | 1.55% |
-| economic_trend | 10.05% | -0.20% | 11.03% | 0.71% | 10.09% | 0.07% | 9.78% | 7.31% | 1.03 | 0.01 | -13.8% | -17.3% | 11.3 | 14.5 | 0.94% | 0.64% |
-| factor_overlay | 8.79% | -1.11% | 10.06% | -0.03% | 8.89% | -0.90% | 9.36% | 6.57% | 0.95 | -0.14 | -15.6% | -17.3% | 16.6 | 23.8 | 1.17% | 0.86% |
-| turning_point | 9.64% | -0.20% | 10.58% | 0.65% | 9.67% | 0.05% | 9.38% | 7.04% | 1.03 | 0.01 | -14.2% | -14.6% | 9.9 | 13.1 | 0.91% | 0.61% |
-| half_short † | 8.76% | 0.55% | 9.37% | 1.12% | 8.74% | 0.68% | 8.02% | 5.16% | 1.09 | 0.13 | -11.5% | -9.5% | 7.3 | 9.6 | 0.63% | 0.44% |
-| net_cap | 7.75% | -0.87% | 8.68% | -0.19% | 7.86% | -0.72% | 8.60% | 5.57% | 0.91 | -0.13 | -14.2% | -13.9% | 9.4 | 12.6 | 0.83% | 0.53% |
-| smooth_leverage † | 9.82% | -0.37% | 10.69% | 0.47% | 9.84% | -0.12% | 9.37% | 7.07% | 1.05 | -0.02 | -13.8% | -15.7% | 9.0 | 12.3 | 0.85% | 0.59% |
-| smooth_leverage_imbalance † | 9.80% | -0.04% | 10.73% | 0.85% | 9.83% | 0.22% | 9.49% | 7.26% | 1.04 | 0.03 | -14.7% | -16.1% | 10.0 | 13.9 | 0.90% | 0.63% |
-| band_25 | 8.58% | 0.47% | 9.20% | 1.07% | 8.60% | 0.65% | 8.32% | 6.10% | 1.03 | 0.11 | -12.8% | -10.8% | 6.1 | 8.4 | 0.60% | 0.42% |
-| histgb_overlay | 9.58% | 1.02% | 10.58% | 1.92% | 9.62% | 1.22% | 9.43% | 6.52% | 1.02 | 0.19 | -14.2% | -10.9% | 12.2 | 17.5 | 0.96% | 0.69% |
-| continuous_signal | 11.13% | 0.67% | 11.85% | 1.53% | 11.11% | 0.94% | 10.09% | 7.46% | 1.10 | 0.13 | -17.0% | -12.3% | 10.7 | 15.3 | 0.74% | 0.59% |
-| final | 11.13% | 0.67% | 11.85% | 1.53% | 11.11% | 0.94% | 10.09% | 7.46% | 1.10 | 0.13 | -17.0% | -12.3% | 10.7 | 15.3 | 0.74% | 0.59% |
+| Strategy | IS Net CAGR | OOS Net CAGR | IS Gross ret | OOS Gross ret | IS Net ret | OOS Net ret | IS Vol | OOS Vol | IS Sharpe | OOS Sharpe | IS Max DD | OOS Max DD | IS Turnover | OOS Turnover | IS Cost drag | OOS Cost drag | IS Leverage | OOS Leverage | IS Imbalance | OOS Imbalance | IS Names | OOS Names |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| baseline | 10.19% | -1.46% | 10.77% | -0.26% | 10.36% | -0.86% | 11.14% | 11.08% | 0.93 | -0.08 | -26.2% | -32.6% | 7.9 | 12.5 | 0.41% | 0.60% | 3.13 | 4.35 | +0.84 | +0.66 | 39.6 | 56.1 |
+| slide_baseline | 12.25% | 0.26% | 12.76% | 2.12% | 12.13% | 0.81% | 10.25% | 10.62% | 1.18 | 0.08 | -13.0% | -22.5% | 13.4 | 28.6 | 0.63% | 1.30% | 4.55 | 9.17 | +1.49 | +3.98 | 41.9 | 56.1 |
+| slide_baseline_exante | 15.68% | -0.26% | 16.32% | 2.28% | 15.43% | 0.53% | 12.51% | 12.64% | 1.23 | 0.04 | -16.0% | -24.6% | 21.8 | 43.7 | 0.90% | 1.75% | 5.75 | 10.97 | +2.03 | +4.30 | 41.9 | 56.1 |
+| enhanced | 10.09% | -0.29% | 10.53% | 0.52% | 10.09% | -0.05% | 9.45% | 7.06% | 1.07 | -0.01 | -13.9% | -14.4% | 9.6 | 12.8 | 0.44% | 0.56% | 3.13 | 3.86 | +0.83 | +0.82 | 39.6 | 56.1 |
+| risk_budget | 9.58% | -0.10% | 10.54% | 1.04% | 9.73% | 0.04% | 10.55% | 5.35% | 0.92 | 0.01 | -12.2% | -13.8% | 25.6 | 33.8 | 0.81% | 1.00% | 3.67 | 4.00 | +0.83 | +0.76 | 39.6 | 56.1 |
+| economic_trend | 10.56% | -0.15% | 11.03% | 0.71% | 10.56% | 0.12% | 9.79% | 7.31% | 1.08 | 0.02 | -13.5% | -16.3% | 11.3 | 14.5 | 0.47% | 0.59% | 3.09 | 3.80 | +0.73 | +0.43 | 39.6 | 56.1 |
+| factor_overlay | 9.42% | -1.02% | 10.06% | -0.03% | 9.48% | -0.81% | 9.37% | 6.57% | 1.01 | -0.12 | -15.2% | -16.4% | 16.6 | 23.8 | 0.58% | 0.78% | 3.09 | 3.78 | +0.55 | +0.58 | 39.6 | 56.1 |
+| turning_point | 10.14% | -0.16% | 10.58% | 0.65% | 10.14% | 0.09% | 9.40% | 7.04% | 1.08 | 0.01 | -13.9% | -14.1% | 9.9 | 13.1 | 0.44% | 0.57% | 3.09 | 3.81 | +0.82 | +0.80 | 39.6 | 56.1 |
+| half_short † | 9.05% | 0.55% | 9.37% | 1.12% | 9.02% | 0.68% | 8.03% | 5.16% | 1.12 | 0.13 | -10.7% | -9.2% | 7.3 | 9.6 | 0.35% | 0.44% | 2.56 | 3.10 | +1.41 | +1.58 | 39.6 | 56.1 |
+| net_cap | 8.22% | -0.81% | 8.68% | -0.19% | 8.30% | -0.66% | 8.61% | 5.57% | 0.96 | -0.12 | -13.9% | -14.2% | 9.5 | 12.6 | 0.38% | 0.47% | 2.44 | 2.79 | +0.35 | +0.22 | 39.6 | 56.1 |
+| smooth_leverage † | 10.28% | -0.33% | 10.69% | 0.47% | 10.26% | -0.09% | 9.39% | 7.07% | 1.09 | -0.01 | -13.5% | -14.9% | 8.9 | 12.2 | 0.43% | 0.55% | 3.12 | 3.86 | +0.83 | +0.83 | 39.6 | 56.1 |
+| smooth_leverage_imbalance † | 10.28% | 0.01% | 10.73% | 0.85% | 10.28% | 0.27% | 9.50% | 7.25% | 1.08 | 0.04 | -14.4% | -15.6% | 10.0 | 13.8 | 0.45% | 0.58% | 3.12 | 3.86 | +0.84 | +0.84 | 39.6 | 56.1 |
+| band_25 | 8.86% | 0.46% | 9.20% | 1.07% | 8.87% | 0.64% | 8.33% | 6.10% | 1.06 | 0.10 | -12.6% | -10.5% | 6.4 | 8.7 | 0.34% | 0.43% | 2.63 | 3.26 | +0.73 | +0.74 | 39.6 | 56.1 |
+| histgb_overlay | 10.08% | 1.05% | 10.58% | 1.92% | 10.08% | 1.26% | 9.44% | 6.53% | 1.07 | 0.19 | -13.9% | -10.5% | 12.2 | 17.5 | 0.50% | 0.66% | 3.18 | 3.86 | +1.09 | +1.79 | 39.6 | 56.1 |
+| continuous_signal | 11.45% | 0.65% | 11.85% | 1.53% | 11.40% | 0.93% | 10.11% | 7.46% | 1.13 | 0.12 | -16.5% | -11.9% | 10.8 | 15.3 | 0.45% | 0.60% | 2.92 | 3.69 | +0.93 | +0.88 | 39.6 | 56.1 |
+| final | 11.45% | 0.65% | 11.85% | 1.53% | 11.40% | 0.93% | 10.11% | 7.46% | 1.13 | 0.12 | -16.5% | -11.9% | 10.8 | 15.3 | 0.45% | 0.60% | 2.92 | 3.69 | +0.93 | +0.88 | 39.6 | 56.1 |
+| sensitivity_cont_econ | 11.82% | 0.65% | 12.20% | 1.52% | 11.74% | 0.93% | 10.23% | 7.56% | 1.15 | 0.12 | -14.9% | -14.7% | 11.3 | 15.3 | 0.46% | 0.60% | 2.91 | 3.68 | +0.82 | +0.47 | 39.6 | 56.1 |
 
 † Designed after the 2015-2025 data had been examined (half-short rule, exposure smoothing): their OOS
 columns are **not a clean out-of-sample test**. None of these entered the final combination.
@@ -102,27 +131,28 @@ traded year (1990) and candidate pools were fixed before any walk-forward result
   verified by `test_lookahead.py`, and the 2015 decision is asserted equal to a selection run on data
   truncated at Dec 2014.
 
-| Strategy | 1990-2014 Net CAGR | OOS Net CAGR | 1990-2014 Gross ret | OOS Gross ret | 1990-2014 Net ret | OOS Net ret | 1990-2014 Vol | OOS Vol | 1990-2014 Sharpe | OOS Sharpe | 1990-2014 Max DD | OOS Max DD | 1990-2014 Turnover | OOS Turnover | 1990-2014 Cost drag | OOS Cost drag |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| baseline | 9.26% | -1.64% | 10.25% | -0.26% | 9.48% | -1.04% | 10.97% | 11.07% | 0.86 | -0.09 | -26.2% | -33.1% | 9.7 | 13.3 | 0.77% | 0.78% |
-| enhanced | 8.86% | -0.33% | 9.56% | 0.52% | 8.85% | -0.09% | 8.16% | 7.06% | 1.08 | -0.01 | -9.4% | -15.0% | 10.3 | 12.8 | 0.71% | 0.60% |
-| final | 10.41% | 0.67% | 11.02% | 1.53% | 10.35% | 0.94% | 9.05% | 7.46% | 1.14 | 0.13 | -11.4% | -12.3% | 12.7 | 15.3 | 0.67% | 0.59% |
-| walk_forward_clean | 9.83% | 0.67% | 10.51% | 1.53% | 9.82% | 0.94% | 9.06% | 7.46% | 1.08 | 0.13 | -11.4% | -12.3% | 13.0 | 15.3 | 0.69% | 0.59% |
-| walk_forward_all † | 9.83% | 0.54% | 10.51% | 1.19% | 9.82% | 0.70% | 9.06% | 5.59% | 1.08 | 0.12 | -11.4% | -10.8% | 13.0 | 12.6 | 0.69% | 0.49% |
+| Strategy | 1990-2014 Net CAGR | OOS Net CAGR | 1990-2014 Gross ret | OOS Gross ret | 1990-2014 Net ret | OOS Net ret | 1990-2014 Vol | OOS Vol | 1990-2014 Sharpe | OOS Sharpe | 1990-2014 Max DD | OOS Max DD | 1990-2014 Turnover | OOS Turnover | 1990-2014 Cost drag | OOS Cost drag | 1990-2014 Leverage | OOS Leverage | 1990-2014 Imbalance | OOS Imbalance | 1990-2014 Names | OOS Names |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| slide_baseline | 12.37% | 0.26% | 13.08% | 2.12% | 12.26% | 0.81% | 10.39% | 10.62% | 1.18 | 0.08 | -10.3% | -22.5% | 17.1 | 28.6 | 0.82% | 1.30% | 6.03 | 9.17 | +2.30 | +3.98 | 51.0 | 56.1 |
+| baseline | 9.56% | -1.46% | 10.25% | -0.26% | 9.77% | -0.86% | 10.98% | 11.08% | 0.89 | -0.08 | -26.2% | -32.6% | 9.1 | 12.5 | 0.49% | 0.60% | 3.82 | 4.35 | +1.27 | +0.66 | 49.0 | 56.1 |
+| enhanced | 9.08% | -0.29% | 9.56% | 0.52% | 9.06% | -0.05% | 8.18% | 7.06% | 1.11 | -0.01 | -9.4% | -14.4% | 10.2 | 12.8 | 0.51% | 0.56% | 3.77 | 3.86 | +1.26 | +0.82 | 49.0 | 56.1 |
+| final | 10.55% | 0.65% | 11.02% | 1.53% | 10.48% | 0.93% | 9.06% | 7.46% | 1.16 | 0.12 | -11.5% | -11.9% | 12.8 | 15.3 | 0.55% | 0.60% | 3.64 | 3.69 | +1.39 | +0.88 | 49.0 | 56.1 |
+| walk_forward_clean | 8.36% | 0.65% | 8.98% | 1.53% | 8.43% | 0.93% | 8.60% | 7.46% | 0.98 | 0.12 | -11.7% | -11.9% | 12.8 | 15.3 | 0.55% | 0.60% | 3.72 | 3.69 | +1.44 | +0.88 | 49.0 | 56.1 |
+| walk_forward_all † | 8.46% | 0.45% | 9.07% | 1.08% | 8.51% | 0.59% | 8.60% | 5.34% | 0.99 | 0.11 | -11.7% | -9.3% | 12.7 | 11.7 | 0.55% | 0.49% | 3.73 | 3.22 | +1.43 | +1.52 | 49.0 | 56.1 |
 
 | Return year | Clean pool selects | All-candidates pool selects † |
 |---:|---|---|
-| 1990 | economic_trend + continuous_signal | economic_trend + continuous_signal |
+| 1990 | risk_budget + economic_trend + turning_point + band_25 | risk_budget + economic_trend + turning_point + band_25 |
 | 1991 | economic_trend + continuous_signal | economic_trend + continuous_signal |
 | 1992 | economic_trend + continuous_signal | economic_trend + continuous_signal |
 | 1993 | economic_trend + continuous_signal | economic_trend + continuous_signal |
 | 1994 | economic_trend + continuous_signal | economic_trend + continuous_signal |
-| 1995 | economic_trend + continuous_signal | economic_trend + continuous_signal |
-| 1996 | continuous_signal | continuous_signal |
-| 1997 | continuous_signal | continuous_signal |
-| 1998 | continuous_signal | continuous_signal |
-| 1999 | continuous_signal | continuous_signal |
-| 2000 | continuous_signal | continuous_signal |
+| 1995 | economic_trend + continuous_signal | economic_trend + smooth_leverage |
+| 1996 | (enhanced only) | (enhanced only) |
+| 1997 | (enhanced only) | (enhanced only) |
+| 1998 | (enhanced only) | (enhanced only) |
+| 1999 | (enhanced only) | (enhanced only) |
+| 2000 | (enhanced only) | (enhanced only) |
 | 2001 | continuous_signal | continuous_signal |
 | 2002 | continuous_signal | continuous_signal |
 | 2003 | continuous_signal | continuous_signal |
@@ -140,21 +170,23 @@ traded year (1990) and candidate pools were fixed before any walk-forward result
 | 2015 | continuous_signal | continuous_signal |
 | 2016 | continuous_signal | continuous_signal |
 | 2017 | continuous_signal | continuous_signal |
-| 2018 | continuous_signal | continuous_signal |
-| 2019 | continuous_signal | continuous_signal |
+| 2018 | continuous_signal | half_short |
+| 2019 | continuous_signal | half_short |
 | 2020 | continuous_signal | half_short |
 | 2021 | continuous_signal | half_short |
 | 2022 | continuous_signal | half_short |
-| 2023 | continuous_signal | half_short + continuous_signal |
-| 2024 | continuous_signal | half_short + continuous_signal |
+| 2023 | continuous_signal | half_short |
+| 2024 | continuous_signal | half_short |
 | 2025 | continuous_signal | half_short + continuous_signal |
 
 ![Wealth, IS vs OOS](combined_wealth_is_vs_oos.png)
 
 ## Caveats
 
-- **Execution timing.** Main results fill at the signal close while impact costs assume 5-day execution;
-  `alpha_decay_execution.py` shows this overstates IS net Sharpe by about 0.07-0.09.
+- **Execution timing.** Trades fill at the signal close; `alpha_decay_execution.py` shows that a feasible
+  execution schedule lowers IS net Sharpe by about 0.07-0.09.
+- **Sample start.** Statistics start Jan 1976 (the course baseline needs 36 months of history); Lecture 11
+  slide 29 starts Dec 1973.
 - **Research look-ahead.** The repository had already analysed 2015-2025 for other strategies, so the OOS
   period is strategy-specific OOS, not a pristine holdout. The 58-market universe was chosen with hindsight.
 - **Macro data.** FRED current vintages (INDPRO, CPIAUCSL, GS2, BAA10Y) include later revisions that were

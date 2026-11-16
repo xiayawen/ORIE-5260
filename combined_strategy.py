@@ -97,8 +97,12 @@ COMPONENTS = {
 }
 # risk_budget sizes on signal signs only, so it cannot use a continuous signal.
 EXCLUSIVE = [{"smooth_leverage", "smooth_leverage_imbalance"}, {"risk_budget", "continuous_signal"}]
-SLIDE_BPS = 2.0           # Lecture 11 convention: 2 bps per unit turnover + 4 rolls/yr at 2 bps
-CONVENTIONS = {"lecture8": "Lecture 8 model, $1bn", "slide_2bps": "Lecture 11: 2 bps + 4 rolls/yr"}
+# Requested after the final selection was known; reported for information, never selected.
+SENSITIVITY = {"sensitivity_cont_econ": frozenset({"continuous_signal", "economic_trend"})}
+SLIDE_BPS = 2.0          # Lecture 11 convention: 2 bps per unit turnover + 4 rolls/yr at 2 bps
+CONVENTIONS = {"slide_2bps": "Lecture 11: 2 bps + 4 rolls/yr", "lecture8": "Lecture 8 model, $1bn"}
+PRIMARY = "slide_2bps"    # headline and selection cost convention (course spec); lecture8 = robustness
+SLIDE_TARGET = 0.11       # Lecture 11 slide 21: 11% ex-ante vol target
 POST_2015_DESIGN = {"half_short", "smooth_leverage", "smooth_leverage_imbalance"}
 CLEAN_POOL = tuple(c for c in COMPONENTS if c not in POST_2015_DESIGN)
 SLEEVES = ("economic_trend", "factor_overlay", "histgb_overlay")
@@ -161,11 +165,22 @@ class Pipeline:
         return self._cached("course", lambda: tsmom_weights(self.signal, self.exp_vol, self.asset_map).fillna(0))
 
     def slide_baseline(self):
-        """Lecture 11 baseline replica: 12m sign, 1/(12m vol) with no floor, 10% target on trailing
-        36m realized vol (economic_trend.price_trend_weights). Matches the slide's IS leverage (~4.6x)
-        and imbalance (~1.5x); used only as the aligned comparison baseline."""
+        """Official baseline (Lecture 11 replica): binary 12m signal, 1/(12m vol)/N with no floor, book
+        scaled to 10% on trailing 36m realized strategy vol (economic_trend.price_trend_weights), no caps.
+        Chosen over the literal 11% ex-ante version because it matches slide 21's IS statistics more
+        closely (turnover 13.42 exactly, leverage, vol, Sharpe)."""
         vol = self.r.rolling(12, min_periods=12).std() * np.sqrt(12)
         return self._cached("slide", lambda: econ.price_trend_weights(self.r, vol).fillna(0))
+
+    def slide_baseline_exante(self):
+        """Literal slide-21 reading: same positions, 11% ex-ante target on the EWMA-covariance forecast,
+        no caps. Overshoots slide 21 on vol, turnover and leverage; reported for transparency."""
+        def build():
+            vol = self.r.rolling(12, min_periods=12).std() * np.sqrt(12)
+            raw = econ.risk_weights(np.sign(self.r.rolling(12, min_periods=12).sum()), vol)
+            forecast = ewma_forecast(self.r, raw)
+            return raw.mul((SLIDE_TARGET / forecast).where(forecast > 0, 0.0).fillna(0.0), axis=0)
+        return self._cached("slide_exante", build)
 
     def core(self, risk_budget, continuous=False):
         if risk_budget:
@@ -280,22 +295,35 @@ class Pipeline:
         cost, _ = cost_breakdown(executed, self.ewma_vol, self.adv, self.asset_class, DEFAULT_PARAMETERS, self.r)
         traded = trade_weights(executed, self.r, "drift").sum(axis=1)
         exposure = executed.abs().sum(axis=1)
-        slide_cost = (traded + exposure * 4 / 12) * SLIDE_BPS / 1e4
+        # Lecture 11 slides 18-19, exactly: roll = sum|w| * 2bps * 4/12; positions grow as
+        # w_{t-1} * (1 + r_t - roll_t) (no NAV normalisation); turnover = sum|w_t - grown|; trade = turnover * 2bps.
+        c = SLIDE_BPS / 1e4
+        roll = exposure * c * 4 / 12
+        r = self.r.reindex_like(executed).fillna(0)
+        grown = (executed.mul(1 + r).sub(executed.mul(roll, axis=0))).shift(1).fillna(0)
+        slide_turnover = (executed - grown).abs().sum(axis=1)
+        slide_cost = slide_turnover * c + roll
         return pd.DataFrame({"gross": gross, "net": gross - cost.total, "cost": cost.total,
                              "net_slide_2bps": gross - slide_cost, "cost_slide_2bps": slide_cost,
+                             "turnover_slide_2bps": slide_turnover,
                              "turnover": traded, "gross_exposure": exposure,
-                             "net_exposure": executed.sum(axis=1)})
+                             "net_exposure": executed.sum(axis=1), "names": executed.ne(0).sum(axis=1)})
 
     def run(self, config):
         config = frozenset(config)
         return self._cached(("run", config), lambda: self.evaluate(self.executed(config)))
 
 
-def stats(series, start, end=None, convention="lecture8"):
-    """Performance over [start, end]. convention: 'lecture8' (selection criterion) or 'slide_2bps'."""
+def net_returns(series, convention=PRIMARY):
+    return series.net if convention == "lecture8" else series.net_slide_2bps
+
+
+def stats(series, start, end=None, convention=PRIMARY):
+    """Performance over [start, end]. convention: 'slide_2bps' (headline, selection) or 'lecture8'."""
     s = series.loc[start:end] if end else series.loc[start:]
     gross = s.gross
-    net, cost = (s.net, s.cost) if convention == "lecture8" else (s.net_slide_2bps, s.cost_slide_2bps)
+    net, cost, turnover = ((s.net, s.cost, s.turnover) if convention == "lecture8"
+                           else (s.net_slide_2bps, s.cost_slide_2bps, s.turnover_slide_2bps))
     years = len(net) / 12
     wealth = (1 + net).cumprod()
     vol = net.std() * np.sqrt(12)
@@ -306,8 +334,9 @@ def stats(series, start, end=None, convention="lecture8"):
         "annual_volatility": vol, "net_sharpe": net.mean() * 12 / vol,
         "gross_sharpe": gross.mean() / gross.std() * np.sqrt(12),
         "max_drawdown": (wealth / wealth.cummax().clip(lower=1) - 1).min(),
-        "annual_turnover": s.turnover.mean() * 12, "annual_cost_drag": cost.mean() * 12,
+        "annual_turnover": turnover.mean() * 12, "annual_cost_drag": cost.mean() * 12,
         "average_gross_exposure": s.gross_exposure.mean(), "average_net_exposure": s.net_exposure.mean(),
+        "average_names": s.names.mean(),
     }
 
 
@@ -319,10 +348,10 @@ def compatible(config, candidate):
     return not any(candidate in group and config & group for group in EXCLUSIVE)
 
 
-def stepwise(pipe, pool=tuple(COMPONENTS), start=IS_START, end=IS_END, verbose=True):
+def stepwise(pipe, pool=tuple(COMPONENTS), start=IS_START, end=IS_END, verbose=True, convention=PRIMARY):
     """Forward stepwise on net Sharpe over [start, end]. Only months <= end are ever scored."""
     def sharpe(config):
-        return stats(pipe.run(config), start, end)["net_sharpe"]
+        return stats(pipe.run(config), start, end, convention)["net_sharpe"]
 
     current, current_sharpe = frozenset(), sharpe(frozenset())
     rows, step = [{"round": 0, "candidate": "(start: enhanced)", "is_net_sharpe": current_sharpe,
@@ -405,15 +434,17 @@ def main():
     table.to_csv(OUT / "stepwise_selection_in_sample.csv", index=False)
     (OUT / "selected_components.json").write_text(json.dumps({
         "selected": [c for c in COMPONENTS if c in selected], "threshold": THRESHOLD,
-        "criterion": "IS (1976-01..2014-12) net Sharpe, Lecture 8 costs at $1bn, 5-day impact",
+        "criterion": f"IS (1976-01..2014-12) net Sharpe, {CONVENTIONS[PRIMARY]}",
         "selection_data_end": IS_END}, indent=2), encoding="utf-8")
     is_check = {c: stats(is_pipe.run(c), IS_START, IS_END) for c in (frozenset(), frozenset(selected))}
 
     # ---- phase 2: one out-of-sample evaluation (after selection is frozen)
     pipe = Pipeline(returns, asset_map)
-    configs = {"enhanced": frozenset(), **{c: frozenset({c}) for c in COMPONENTS}, "final": frozenset(selected)}
+    configs = {"enhanced": frozenset(), **{c: frozenset({c}) for c in COMPONENTS}, "final": frozenset(selected),
+               **SENSITIVITY}
     runs = {"baseline": pipe.evaluate(pipe.course_baseline().shift(1).fillna(0.0)),
-            "slide_baseline": pipe.evaluate(pipe.slide_baseline().shift(1).fillna(0.0))}
+            "slide_baseline": pipe.evaluate(pipe.slide_baseline().shift(1).fillna(0.0)),
+            "slide_baseline_exante": pipe.evaluate(pipe.slide_baseline_exante().shift(1).fillna(0.0))}
     runs.update({name: pipe.run(cfg) for name, cfg in configs.items()})
     for cfg, expected in is_check.items():  # IS numbers must not move when post-2014 data are added
         got = stats(pipe.run(cfg), IS_START, IS_END)
@@ -445,10 +476,11 @@ def main():
                              **stats(series, start, end, convention)})
     all_results = pd.DataFrame(rows)
     all_results.to_csv(OUT / "is_vs_oos_performance.csv", index=False)
-    results = all_results[all_results.costs == "lecture8"]
+    results = all_results[all_results.costs == PRIMARY]
     write_convention_section(all_results, tainted)
-    pd.DataFrame({n: s.net for n, s in runs.items()}).loc[IS_START:].to_csv(OUT / "monthly_net_returns.csv")
+    pd.DataFrame({n: net_returns(s) for n, s in runs.items()}).loc[IS_START:].to_csv(OUT / "monthly_net_returns.csv")
     plot(runs, selected)
+    plot_smile(runs, returns["SP"], selected)
     write_report(table, results, selected, decisions, tainted)
     view = results.pivot(index="strategy", columns="period", values="net_sharpe").loc[list(runs)]
     print(view[list(PERIODS)].round(3).to_string())
@@ -458,33 +490,35 @@ def main():
 
 def write_convention_section(all_results, tainted):
     """Like-for-like comparison with the Lecture 11 baseline under both cost conventions."""
-    names = ["slide_baseline", "baseline", "enhanced", "continuous_signal", "band_25", "histgb_overlay",
-             "final", "walk_forward_clean"]
+    names = ["slide_baseline", "slide_baseline_exante", "baseline", "enhanced", "continuous_signal", "band_25",
+             "histgb_overlay", "final", *SENSITIVITY, "walk_forward_clean"]
     get = lambda n, p, c: all_results[(all_results.strategy == n) & (all_results.period == p)
                                       & (all_results.costs == c)].iloc[0]
-    lines = ["# Like-for-like comparison with the Lecture 11 baseline", "",
-             "Lecture 11 reports the course baseline OOS (Jan 2015 - Jun 2025) at Sharpe 0.31 with 7.9x leverage, "
-             "2.7x net long and turnover 30, net of 2 bps per unit turnover plus 4 rolls a year at 2 bps. "
-             "`slide_baseline` replicates its construction on our monthly data (12-month sign, 1/(12m vol) with no "
-             "floor, 10% target on trailing 36-month realized vol). It matches the slide's IS profile (Sharpe "
-             "1.13-1.22, leverage 4.6x, net long 1.5x) but not its OOS Sharpe: the slide uses daily data and a "
-             "different OOS panel (56 active names), which we do not have.", "",
-             "Selection always used the Lecture 8 model at $1bn; the 2 bps convention is reporting only.", ""]
+    lines = ["# Cost-convention comparison", "",
+             "`slide_baseline` is the official baseline (Lecture 11 replica: binary 12-month signal, 1/(12-month "
+             "vol)/N with no floor, 10% target on trailing 36-month realized vol, no caps). "
+             "`slide_baseline_exante` is the literal slide-21 reading (11% ex-ante target on the EWMA-covariance "
+             "forecast); it overshoots slide 21 on vol, turnover and leverage. "
+             "`baseline` is the Lecture 6 course baseline used in the midterm.", "",
+             f"Selection used {CONVENTIONS[PRIMARY]}; {CONVENTIONS['lecture8']} is a robustness check.", ""]
     for convention, title in CONVENTIONS.items():
         lines += [f"## Net of {title}", "",
                   "| Strategy | IS Sharpe | OOS Sharpe | OOS gross Sharpe | IS vol | OOS vol | OOS Max DD | "
-                  "OOS gross exp. | OOS net exp. | OOS turnover | OOS cost drag |",
-                  "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+                  "OOS leverage | OOS imbalance | OOS names | OOS turnover | OOS cost drag |",
+                  "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
         for n in names:
             a, b = get(n, "IS 1976-2014", convention), get(n, "OOS 2015-2025", convention)
             tag = n + (" †" if n in tainted else "")
             lines.append(f"| {tag} | {a.net_sharpe:.2f} | {b.net_sharpe:.2f} | {b.gross_sharpe:.2f} | "
                          f"{a.annual_volatility:.1%} | {b.annual_volatility:.1%} | {b.max_drawdown:.1%} | "
                          f"{b.average_gross_exposure:.1f}x | {b.average_net_exposure:+.1f}x | "
-                         f"{b.annual_turnover:.1f} | {b.annual_cost_drag:.2%} |")
+                         f"{b.average_names:.1f} | {b.annual_turnover:.1f} | {b.annual_cost_drag:.2%} |")
         lines.append("")
-    lines += ["Rows other than the two baselines, `enhanced`, `final` and `walk_forward_clean` are `enhanced` plus "
-              "that one component. † = not a clean out-of-sample test.", ""]
+    lines += ["Rows other than the two baselines, `enhanced`, `final`, `walk_forward_clean` and the sensitivity "
+              "row are `enhanced` plus that one component. † = not a clean out-of-sample test.", "",
+              "`sensitivity_cont_econ` = enhanced + continuous signal + economic trend. Its IS gain over `final` is "
+              "+0.020, below the 0.05 threshold, so the selection rule did not choose it; it was run on request after "
+              "the final strategy was known. Its OOS column is information, not evidence for adopting it.", ""]
     (OUT / "cost_convention_comparison.md").write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -492,11 +526,15 @@ def describe(name, configs):
     if name == "baseline":
         return "Course baseline (40%/expanding vol, 1/N, no target)"
     if name == "slide_baseline":
-        return "Lecture 11 baseline replica (12m vol, no floor, 10% target on 36m realized vol)"
+        return "Official baseline, Lecture 11 replica (12m vol, no floor, 10% target on 36m realized vol, no caps)"
+    if name == "slide_baseline_exante":
+        return "Literal slide-21 reading (12m vol, no floor, 11% ex-ante EWMA-covariance target, no caps)"
     if name == "enhanced":
         return "EWMA vol + EWMA-covariance 10% target (start point)"
     if name == "final":
         return label(configs["final"])
+    if name in SENSITIVITY:
+        return label(configs[name]) + " (sensitivity, not selected: +0.020 IS, below the 0.05 threshold)"
     if name == "walk_forward_clean":
         return "Walk-forward selection, clean pool (expanding window, annual)"
     if name == "walk_forward_all":
@@ -510,22 +548,52 @@ def plot(runs, selected):
     for name, series in runs.items():
         if name in main_lines:
             continue
-        ax.plot((1 + series.net.loc[IS_START:]).cumprod(), lw=0.8, alpha=0.35, color="grey")
+        ax.plot((1 + net_returns(series).loc[IS_START:]).cumprod(), lw=0.8, alpha=0.35, color="grey")
     styles = {"baseline": ("#7f7f7f", "--"), "slide_baseline": ("#000000", ":"), "enhanced": ("#1f77b4", "-"), "final": ("#d62728", "-"),
               "walk_forward_clean": ("#2ca02c", "-"), "walk_forward_all": ("#2ca02c", ":")}
     for name, (color, ls) in styles.items():
         lab = f"final: {label(selected)}" if name == "final" else name
-        ax.plot((1 + runs[name].net.loc[IS_START:]).cumprod(), color=color, ls=ls, lw=1.8, label=lab)
+        ax.plot((1 + net_returns(runs[name]).loc[IS_START:]).cumprod(), color=color, ls=ls, lw=1.8, label=lab)
     ax.plot([], [], color="grey", alpha=0.5, label="enhanced + one component")
     ax.axvline(pd.Timestamp("1990-01-01"), color="#2ca02c", lw=0.8, ls="--")
     ax.axvspan(pd.Timestamp(OOS_START), runs["final"].index.max(), color="grey", alpha=0.15, label="out-of-sample")
     ax.set_yscale("log")
-    ax.set_title("Wealth net of Lecture 8 costs at $1bn (log); shaded = Jan 2015 - May 2025 out-of-sample")
+    ax.set_title(f"Wealth net of {CONVENTIONS[PRIMARY]} (log); shaded = Jan 2015 - May 2025 out-of-sample")
     ax.legend(fontsize=8, loc="upper left")
     ax.grid(alpha=0.2)
     fig.tight_layout()
     fig.savefig(OUT / "combined_wealth_is_vs_oos.png", dpi=160)
     plt.close(fig)
+
+
+def plot_smile(runs, sp, selected):
+    """Lecture 11 slide 22: quarterly strategy returns by S&P 500 futures quarterly-return decile,
+    annualized (x4). IS = 1982 (SP start) - 2014; OOS = 2015 - 2025."""
+    names = {"slide_baseline": "Baseline (Lecture 11)", "final": f"Final: {label(selected)}"}
+    quarterly = lambda x: (1 + x).resample("QE").prod(min_count=1) - 1
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.5), sharey=True)
+    rows = []
+    for ax, (period, (start, end)) in zip(axes, (("IS 1982-2014", ("1982-06-01", IS_END)),
+                                               ("OOS 2015-2025", (OOS_START, None)))):
+        market = quarterly(sp.loc[start:end].dropna())
+        decile = pd.qcut(market, 10, labels=False) + 1
+        for i, (name, lab) in enumerate(names.items()):
+            q = quarterly(net_returns(runs[name]).loc[start:end]).reindex(market.index)
+            by_decile = q.groupby(decile).mean() * 4
+            ax.bar(by_decile.index + (i - 0.5) * 0.4, by_decile * 100, 0.4, label=lab)
+            rows += [{"period": period, "strategy": name, "sp_decile": int(k), "annualized_return": v,
+                      "sp_decile_avg_quarterly_return": market.groupby(decile).mean()[k]} for k, v in by_decile.items()]
+        ax.set_title(f"S&P 500 decile smile, {period}")
+        ax.set_xlabel("S&P 500 quarterly return decile (1 = worst)")
+        ax.axhline(0, color="black", lw=0.8)
+        ax.set_xticks(range(1, 11))
+        ax.grid(alpha=0.2)
+    axes[0].set_ylabel("Strategy return, annualized (%)")
+    axes[0].legend(fontsize=8)
+    fig.tight_layout()
+    fig.savefig(OUT / "sp500_smile.png", dpi=160)
+    plt.close(fig)
+    pd.DataFrame(rows).to_csv(OUT / "sp500_smile.csv", index=False)
 
 
 def write_report(table, results, selected, decisions, tainted):
@@ -536,10 +604,28 @@ def write_report(table, results, selected, decisions, tainted):
     cols = [("net_cagr", "Net CAGR", "{:.2%}"), ("annual_gross_return", "Gross ret", "{:.2%}"),
             ("annual_net_return", "Net ret", "{:.2%}"), ("annual_volatility", "Vol", "{:.2%}"),
             ("net_sharpe", "Sharpe", "{:.2f}"), ("max_drawdown", "Max DD", "{:.1%}"),
-            ("annual_turnover", "Turnover", "{:.1f}"), ("annual_cost_drag", "Cost drag", "{:.2%}")]
+            ("annual_turnover", "Turnover", "{:.1f}"), ("annual_cost_drag", "Cost drag", "{:.2%}"),
+            ("average_gross_exposure", "Leverage", "{:.2f}"), ("average_net_exposure", "Imbalance", "{:+.2f}"),
+            ("average_names", "Names", "{:.1f}")]
     perf = ["| Strategy | " + " | ".join(f"IS {c[1]} | OOS {c[1]}" for c in cols) + " |",
             "|---|" + "---:|" * (2 * len(cols))]
     get = lambda name, period: results[(results.strategy == name) & (results.period == period)].iloc[0]
+    sb_is, sb_oos = get("slide_baseline", "IS 1976-2014"), get("slide_baseline", "OOS 2015-2025")
+    fn_is, fn_oos = get("final", "IS 1976-2014"), get("final", "OOS 2015-2025")
+    slide = {"IS": dict(r=0.111, v=0.099, s=1.13, t=13.42, c=0.0059, l=4.0, n=39.5, i=1.3),
+             "OOS": dict(r=0.030, v=0.095, s=0.31, t=30.46, c=None, l=7.94, n=56.3, i=2.7)}
+    pct = lambda x: "—" if x is None else f"{x:.1%}"
+    align = ["| | Slide 21 IS | Baseline IS | Final IS | Slide 30 OOS | Baseline OOS | Final OOS |",
+             "|---|---:|---:|---:|---:|---:|---:|"]
+    for lab, key, k, f in (("Avg net return", "r", "annual_net_return", pct), ("Std", "v", "annual_volatility", pct),
+                           ("Sharpe", "s", "net_sharpe", lambda x: f"{x:.2f}"),
+                           ("Turnover", "t", "annual_turnover", lambda x: f"{x:.2f}"),
+                           ("T-costs", "c", "annual_cost_drag", lambda x: "—" if x is None else f"{x:.2%}"),
+                           ("Leverage", "l", "average_gross_exposure", lambda x: f"{x:.2f}"),
+                           ("#Names", "n", "average_names", lambda x: f"{x:.1f}"),
+                           ("Imbalance", "i", "average_net_exposure", lambda x: f"{x:.2f}")):
+        align.append(f"| {lab} | {f(slide['IS'][key])} | {f(sb_is[k])} | {f(fn_is[k])} | "
+                     f"{f(slide['OOS'][key])} | {f(sb_oos[k])} | {f(fn_oos[k])} |")
     for name in results.strategy.unique():
         if name.startswith("walk_forward"):
             continue
@@ -548,7 +634,7 @@ def write_report(table, results, selected, decisions, tainted):
         perf.append(f"| {tag} | " + " | ".join(f"{f.format(a[k])} | {f.format(b[k])}" for k, _, f in cols) + " |")
     wf_rows = ["| Strategy | " + " | ".join(f"1990-2014 {c[1]} | OOS {c[1]}" for c in cols) + " |",
                "|---|" + "---:|" * (2 * len(cols))]
-    for name in ("baseline", "enhanced", "final", "walk_forward_clean", "walk_forward_all"):
+    for name in ("slide_baseline", "baseline", "enhanced", "final", "walk_forward_clean", "walk_forward_all"):
         a, b = get(name, "WF 1990-2014"), get(name, "OOS 2015-2025")
         tag = name + (" †" if name in tainted else "")
         wf_rows.append(f"| {tag} | " + " | ".join(f"{f.format(a[k])} | {f.format(b[k])}" for k, _, f in cols) + " |")
@@ -559,15 +645,31 @@ def write_report(table, results, selected, decisions, tainted):
     final_tainted = sorted(POST_2015_DESIGN & set(selected))
     report = f"""# Combined strategy: in-sample selection, out-of-sample evaluation
 
-**Final combination:** `{label(selected)}`.
+**Final combination:** `{label(selected)}`. All numbers are net of {CONVENTIONS[PRIMARY]} (Lecture 11
+slides 17-19, exact turnover formula) unless stated; {CONVENTIONS['lecture8']} is in
+`cost_convention_comparison.md`.
+
+## Baseline alignment (Lecture 11 slides 21 and 30)
+
+`Baseline` = Lecture 11 replica: binary 12-month signal, 1/(12-month vol)/N with no floor, 10% target on
+the trailing 36-month realized strategy vol, no leverage cap, monthly rebalance. A literal 11% ex-ante target on
+our monthly EWMA-covariance forecast (`slide_baseline_exante`) was also tried: IS vol 12.5%, turnover 21.8,
+leverage 5.75, i.e. further from slide 21 than this replica, which matches slide-21 turnover (13.42) exactly.
+The replica was chosen on that IS match, after both versions' OOS results had been seen. Slide 30 uses daily data
+(21-business-day returns) and ends Jun 2025; we use monthly returns through May 2025, so OOS levels are
+not expected to match exactly.
+
+{chr(10).join(align)}
+
+![S&P 500 smile](sp500_smile.png)
 
 ## Protocol
 
 - In-sample (IS) = Jan 1976 - Dec 2014; out-of-sample (OOS) = Jan 2015 - May 2025
   (`MonthlyReturns_FullSample.xlsx`).
 - Forward stepwise from `enhanced`: each round adds the candidate with the highest IS net Sharpe if it
-  improves the current IS net Sharpe by at least {THRESHOLD}. Net = Lecture 8 cost model
-  (`transaction_cost_model.py`) at $1bn, 5-day impact, drift-adjusted turnover.
+  improves the current IS net Sharpe by at least {THRESHOLD}. Net = {CONVENTIONS[PRIMARY]}. An earlier
+  run selected with the Lecture 8 model at $1bn and chose the same combination.
 - The selection ran on returns truncated at Dec 2014, so no 2015+ value was available to it. The OOS run
   was done once afterwards; the script asserts the IS numbers are identical with and without 2015+ data.
 - All component parameters are those fixed in their original scripts on pre-2015 data; nothing was tuned
@@ -579,8 +681,9 @@ def write_report(table, results, selected, decisions, tainted):
 - `continuous_signal` (Lecture 11 slide 24) was added as a candidate after the OOS results of the other
   components had been seen, prompted by the gap to the Lecture 11 baseline. Its specification
   (clip(12-month return / annual EWMA vol, -1, 1), one variant, no grid) was fixed before it was run.
-- `slide_baseline` replicates the Lecture 11 baseline for comparison; see `cost_convention_comparison.md`
-  for all strategies under both the Lecture 8 ($1bn) and the Lecture 11 (2 bps) cost conventions.
+- Three baselines are reported: `slide_baseline` (official, Lecture 11 replica), `slide_baseline_exante`
+  (literal 11% ex-ante reading) and `baseline` (Lecture 6 course baseline from the midterm: expanding vol,
+  40%/vol, 1/N, no portfolio target).
 - Rebalance frequency was not a candidate: weekly/daily trading needs daily closes after 2014, which are
   not available here, so it cannot be tested out of sample.
 
@@ -591,10 +694,11 @@ def write_report(table, results, selected, decisions, tainted):
 Sharpe standard errors are about 0.19 over 39 IS years, so a 0.05 step is not statistically significant
 on its own; the threshold only guards against adding near-zero improvements.
 
-## In-sample vs out-of-sample (net of Lecture 8 costs at $1bn unless labelled gross)
+## In-sample vs out-of-sample (net of {CONVENTIONS[PRIMARY]} unless labelled gross)
 
-Rows other than `baseline`, `enhanced` and `final` are `enhanced` plus that one component.
-Turnover is annual drift-adjusted traded notional (x NAV).
+Rows other than the baselines, `enhanced`, `final` and the sensitivity row are `enhanced` plus that one
+component. Turnover is annual traded notional (x NAV); leverage = average gross exposure; imbalance = average
+net long; names = average number of positions.
 
 {chr(10).join(perf)}
 
@@ -631,8 +735,10 @@ traded year ({WF_FIRST_YEAR}) and candidate pools were fixed before any walk-for
 
 ## Caveats
 
-- **Execution timing.** Main results fill at the signal close while impact costs assume 5-day execution;
-  `alpha_decay_execution.py` shows this overstates IS net Sharpe by about 0.07-0.09.
+- **Execution timing.** Trades fill at the signal close; `alpha_decay_execution.py` shows that a feasible
+  execution schedule lowers IS net Sharpe by about 0.07-0.09.
+- **Sample start.** Statistics start Jan 1976 (the course baseline needs 36 months of history); Lecture 11
+  slide 29 starts Dec 1973.
 - **Research look-ahead.** The repository had already analysed 2015-2025 for other strategies, so the OOS
   period is strategy-specific OOS, not a pristine holdout. The 58-market universe was chosen with hindsight.
 - **Macro data.** FRED current vintages (INDPRO, CPIAUCSL, GS2, BAA10Y) include later revisions that were
