@@ -11,14 +11,11 @@ import os
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/orie5260-matplotlib")
 
-import pandas as pd
-
-from combined_strategy import (
-    OUT, CLEAN_POOL, ALL_COMPONENTS_CONTINUOUS, POST_2015_DESIGN, Pipeline, stats, walk_forward,
+from combined_strategy import OUT, CLEAN_POOL, Pipeline, walk_forward
+from exploratory_strategy import (
+    FINAL, EXPLORATORY_ROWS, EXPLORATORY_EXPLANATIONS, evaluate_rows, markdown_rows,
 )
-from risk_budgeting import IS_START, IS_END, OOS_START, read_full_sample_returns
-
-FINAL = frozenset({"continuous_signal"})
+from risk_budgeting import read_full_sample_returns
 
 # (tier, key, short name, how it is built, convention)
 ROWS = [
@@ -28,17 +25,8 @@ ROWS = [
     ("Robustness", "enhanced", "Enhanced (without continuous signal)", frozenset(), "slide_2bps"),
     ("Robustness", "walk_forward", "Walk-forward selection, clean pool", None, "slide_2bps"),
     ("Robustness", "final_lecture8", "Final under Lecture 8 costs ($1bn)", FINAL, "lecture8"),
-    ("Exploratory", "final_histgb", "Final + HistGB sleeve", FINAL | {"histgb_overlay"}, "slide_2bps"),
-    ("Exploratory", "final_band", "Final + no-trade band (band_25)", FINAL | {"band_25"}, "slide_2bps"),
-    ("Exploratory", "final_half_short", "Final + half-short †", FINAL | {"half_short"}, "slide_2bps"),
-    ("Exploratory", "all_clean", "All clean candidates (continuous core)", ALL_COMPONENTS_CONTINUOUS - POST_2015_DESIGN,
-     "slide_2bps"),
+    *EXPLORATORY_ROWS,  # defined in exploratory_strategy.py
 ]
-
-METRICS = [("annual_net_return", "Net ret", "{:.1%}"), ("annual_volatility", "Vol", "{:.1%}"),
-           ("net_sharpe", "Sharpe", "{:.2f}"), ("max_drawdown", "Max DD", "{:.1%}"),
-           ("average_gross_exposure", "Leverage", "{:.1f}x"), ("average_net_exposure", "Imbalance", "{:+.1f}x"),
-           ("annual_turnover", "Turnover", "{:.1f}"), ("annual_cost_drag", "Cost", "{:.2%}")]
 
 EXPLANATIONS = {
     "slide_baseline": """**What it is.** Our replica of the course baseline in Lecture 11 (slides 17-21). Each month, every
@@ -103,42 +91,7 @@ over 5 days.
 
 **Why it is shown.** The conclusions do not depend on the cost assumption: Sharpe ratios move by about 0.03,
 and the stepwise selection picks the same strategy under either convention.""",
-
-    "final_histgb": """**What it is.** The final strategy plus a 30% sleeve from a gradient-boosted tree model that predicts each
-market's next-month direction from about 60 price-based features. The model is refit every year on the
-previous 15 years only (walk-forward), so its forecasts never use future data.
-
-**Why it is exploratory.** It slightly lowered in-sample Sharpe (1.11 vs 1.13), so the selection rule
-correctly left it out. Its out-of-sample Sharpe (0.31, coincidentally the same as slide 30's baseline) was not
-predictable from in-sample evidence; adopting it now would mean choosing on out-of-sample results. It is the
-most promising direction for future work, to be validated on data after May 2025.""",
-
-    "final_band": """**What it is.** The final strategy plus a no-trade band: a position is only traded when it drifts more
-than 25% away from its target, and then only back to the band edge (Lecture 8: trade off alpha against costs).
-
-**Why it is exploratory.** It cuts turnover, but on top of the continuous signal it lowered in-sample Sharpe,
-so the rule rejected it. The continuous signal already shrinks weak positions, and the band then keeps
-positions further below target. It looks better out of sample, when trading less helped in a choppy decade;
-that is a regime effect, not evidence for the rule.""",
-
-    "final_half_short": """**What it is.** The final strategy with every short position halved (longs unchanged).
-
-**Why it is exploratory (†).** The rule was designed by the team after seeing that shorts lost money in
-2015-2025, so its out-of-sample number is not a clean test. It also raises the net long position, i.e. more
-equity-market exposure, which works against trend-following's role as crisis protection.""",
-
-    "all_clean": """**What it is.** The continuous-signal strategy with every compatible candidate that was designed
-before 2015 switched on at once: economic-trend, factor and HistGB sleeves, turning-point reduction,
-net-exposure cap and the no-trade band. Half-short and the smoothing rules are left out because they were
-designed after seeing 2015-2025 data. With all three sleeves active (from 1997, when HistGB starts) the trend
-core is only 30% of the mix (economic trend 20%, factor 20%, HistGB 30%); before 1997 it is 60%. The
-turning-point cut and the net cap then remove exposure after the mix is re-targeted to 10%.
-
-**Why it is exploratory.** It is clearly worse in-sample (0.93 vs 1.13 Sharpe), a gap large enough to be a real
-result rather than noise. Its higher out-of-sample Sharpe comes from lower risk, not more return: the overlays
-keep shrinking the book (leverage about 2.3x, volatility about 4%), so net return is no higher than the final
-strategy's. Including the post-2015 rules as well gives almost the same out-of-sample Sharpe (0.22), so the
-effect is not driven by them.""",
+    **EXPLORATORY_EXPLANATIONS,  # defined in exploratory_strategy.py
 }
 
 
@@ -150,22 +103,9 @@ def main():
         "course_baseline": pipe.evaluate(pipe.course_baseline().shift(1).fillna(0.0)),
         "walk_forward": pipe.evaluate(walk_forward(pipe, CLEAN_POOL)[1]),
     }
-    rows = []
-    for tier, key, name, config, convention in ROWS:
-        s = series[key] if key in series else pipe.run(config)
-        for period, (start, end) in (("IS", (IS_START, IS_END)), ("OOS", (OOS_START, None))):
-            rows.append({"tier": tier, "key": key, "strategy": name, "costs": convention, "period": period,
-                         **stats(s, start, end, convention)})
-    table = pd.DataFrame(rows)
+    table = evaluate_rows(pipe, ROWS, series)
     table.to_csv(OUT / "summary_table.csv", index=False)
-
-    head = "| Tier | Strategy | " + " | ".join(f"IS {m[1]} | OOS {m[1]}" for m in METRICS) + " |"
-    lines = [head, "|---|---|" + "---:|" * (2 * len(METRICS))]
-    for tier, key, name, _, convention in ROWS:
-        a = table[(table.key == key) & (table.period == "IS")].iloc[0]
-        b = table[(table.key == key) & (table.period == "OOS")].iloc[0]
-        lines.append(f"| {tier} | {name} | " + " | ".join(f"{f.format(a[k])} | {f.format(b[k])}"
-                                                           for k, _, f in METRICS) + " |")
+    lines = markdown_rows(table, ROWS)
     doc = ["# Strategy summary: main, robustness and exploratory", "",
            "Net of 2 bps per unit turnover + 4 futures rolls a year at 2 bps (Lecture 11 slides 17-19) unless "
            "stated. IS = Jan 1976 - Dec 2014 (all choices made here); OOS = Jan 2015 - May 2025 (evaluated once). "
@@ -175,7 +115,8 @@ def main():
            "**Main** rows are the baseline-vs-enhanced comparison the report asks for. **Robustness** rows check "
            "that the conclusion survives other baselines, the selection procedure and the cost model. "
            "**Exploratory** rows were tested but not selected by the in-sample rule; their OOS numbers are "
-           "information, not evidence. Exploratory rows are all the final strategy plus one change.", "",
+           "information, not evidence. Each exploratory row adds one change to the final strategy, except the "
+           "last, which switches on every pre-2015 candidate at once (details in `exploratory_strategy.py`).", "",
            *lines, "",
            "Sharpe standard errors are about 0.19 in-sample and 0.31 out-of-sample, so OOS differences of 0.1-0.2 "
            "are within noise. Trades are assumed to fill at the signal close; a feasible execution schedule "

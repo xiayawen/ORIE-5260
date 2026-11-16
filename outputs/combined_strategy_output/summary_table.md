@@ -2,7 +2,7 @@
 
 Net of 2 bps per unit turnover + 4 futures rolls a year at 2 bps (Lecture 11 slides 17-19) unless stated. IS = Jan 1976 - Dec 2014 (all choices made here); OOS = Jan 2015 - May 2025 (evaluated once). Leverage = average gross exposure (x NAV); imbalance = average net long; turnover = annual traded notional (x NAV); cost = annual cost drag. † = includes a rule designed after seeing 2015-2025 data, so its OOS result is not a clean test.
 
-**Main** rows are the baseline-vs-enhanced comparison the report asks for. **Robustness** rows check that the conclusion survives other baselines, the selection procedure and the cost model. **Exploratory** rows were tested but not selected by the in-sample rule; their OOS numbers are information, not evidence. Exploratory rows are all the final strategy plus one change.
+**Main** rows are the baseline-vs-enhanced comparison the report asks for. **Robustness** rows check that the conclusion survives other baselines, the selection procedure and the cost model. **Exploratory** rows were tested but not selected by the in-sample rule; their OOS numbers are information, not evidence. Each exploratory row adds one change to the final strategy, except the last, which switches on every pre-2015 candidate at once (details in `exploratory_strategy.py`).
 
 | Tier | Strategy | IS Net ret | OOS Net ret | IS Vol | OOS Vol | IS Sharpe | OOS Sharpe | IS Max DD | OOS Max DD | IS Leverage | OOS Leverage | IS Imbalance | OOS Imbalance | IS Turnover | OOS Turnover | IS Cost | OOS Cost |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
