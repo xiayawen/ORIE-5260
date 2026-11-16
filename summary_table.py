@@ -14,7 +14,7 @@ os.environ.setdefault("MPLCONFIGDIR", "/tmp/orie5260-matplotlib")
 import pandas as pd
 
 from combined_strategy import (
-    OUT, CLEAN_POOL, ALL_COMPONENTS_CONTINUOUS, Pipeline, stats, walk_forward,
+    OUT, CLEAN_POOL, ALL_COMPONENTS_CONTINUOUS, POST_2015_DESIGN, Pipeline, stats, walk_forward,
 )
 from risk_budgeting import IS_START, IS_END, OOS_START, read_full_sample_returns
 
@@ -31,7 +31,8 @@ ROWS = [
     ("Exploratory", "final_histgb", "Final + HistGB sleeve", FINAL | {"histgb_overlay"}, "slide_2bps"),
     ("Exploratory", "final_band", "Final + no-trade band (band_25)", FINAL | {"band_25"}, "slide_2bps"),
     ("Exploratory", "final_half_short", "Final + half-short †", FINAL | {"half_short"}, "slide_2bps"),
-    ("Exploratory", "all_candidates", "All candidates (continuous core) †", ALL_COMPONENTS_CONTINUOUS, "slide_2bps"),
+    ("Exploratory", "all_clean", "All clean candidates (continuous core)", ALL_COMPONENTS_CONTINUOUS - POST_2015_DESIGN,
+     "slide_2bps"),
 ]
 
 METRICS = [("annual_net_return", "Net ret", "{:.1%}"), ("annual_volatility", "Vol", "{:.1%}"),
@@ -126,14 +127,16 @@ that is a regime effect, not evidence for the rule.""",
 2015-2025, so its out-of-sample number is not a clean test. It also raises the net long position, i.e. more
 equity-market exposure, which works against trend-following's role as crisis protection.""",
 
-    "all_candidates": """**What it is.** The continuous-signal strategy with every compatible candidate switched on at once:
-economic-trend, factor and HistGB sleeves, turning-point reduction, half-short, net-exposure cap, leverage and
-imbalance smoothing, and the no-trade band.
+    "all_clean": """**What it is.** The continuous-signal strategy with every compatible candidate that was designed
+before 2015 switched on at once: economic-trend, factor and HistGB sleeves, turning-point reduction,
+net-exposure cap and the no-trade band. Half-short and the smoothing rules are left out because they were
+designed after seeing 2015-2025 data.
 
-**Why it is exploratory (†).** It is clearly worse in-sample (about 0.2 Sharpe lower). Its higher
-out-of-sample Sharpe comes from lower risk, not more return: the overlays keep shrinking the book (leverage
-about 1.7x, volatility about 4%), so net return is no higher than the final strategy's. It includes rules
-designed after seeing 2015+ data.""",
+**Why it is exploratory.** It is clearly worse in-sample (0.93 vs 1.13 Sharpe), a gap large enough to be a real
+result rather than noise. Its higher out-of-sample Sharpe comes from lower risk, not more return: the overlays
+keep shrinking the book (leverage about 2.3x, volatility about 4%), so net return is no higher than the final
+strategy's. Including the post-2015 rules as well gives almost the same out-of-sample Sharpe (0.22), so the
+effect is not driven by them.""",
 }
 
 
