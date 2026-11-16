@@ -107,6 +107,13 @@ class CombinedStrategyTruncation(unittest.TestCase):
                                                    self.full.executed(config).loc[idx].to_numpy(), atol=1e-10)
                         np.testing.assert_allclose(short.run(config).to_numpy(),
                                                    self.full.run(config).loc[idx].to_numpy(), atol=1e-10)
+                with self.subTest(cut=cut, config="walk_forward_clean"):
+                    from combined_strategy import walk_forward, CLEAN_POOL
+                    _, short_exec, short_dec = walk_forward(short, CLEAN_POOL)
+                    _, full_exec, full_dec = walk_forward(self.full, CLEAN_POOL)
+                    np.testing.assert_allclose(short_exec.to_numpy(), full_exec.loc[short.r.index].to_numpy(), atol=1e-10)
+                    common = full_dec.return_year.isin(short_dec.return_year)
+                    self.assertEqual(short_dec.selected.tolist(), full_dec.loc[common, "selected"].tolist())
 
 
 if __name__ == "__main__":

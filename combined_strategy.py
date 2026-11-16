@@ -72,11 +72,15 @@ OUT = ROOT / "outputs" / "combined_strategy_output"
 MACRO_DIR = ROOT / "macro_data"
 TARGET = 0.10
 THRESHOLD = 0.05
-SLEEVE_WEIGHT = {"economic_trend": econ.ENHANCED_WEIGHT, "factor_overlay": 0.20}
+SLEEVE_WEIGHT = {"economic_trend": econ.ENHANCED_WEIGHT, "factor_overlay": 0.20, "histgb_overlay": 0.30}
 FACTOR = "NegativeSkew_12m"
+HISTGB_WINDOW = 15        # rolling_sign_prediction.py: 15y window and 30% blend chosen on 2000-2004 validation
+WF_FIRST_YEAR = 1990      # first return year traded with a walk-forward selection (fixed in advance)
 TURNING_ALPHA = 0.50
 HALF_SHORT = 0.50
 BAND = ("band", 0.25)
+PERIODS = {"IS 1976-2014": (IS_START, IS_END), "WF 1990-2014": ("1990-01-01", IS_END),
+           "OOS 2015-2025": (OOS_START, None)}
 
 COMPONENTS = {
     "risk_budget": "R2 risk budget core (25% risk per asset class)",
@@ -88,10 +92,12 @@ COMPONENTS = {
     "smooth_leverage": "Smooth gross leverage (3m)",
     "smooth_leverage_imbalance": "Smooth leverage and imbalance (3m)",
     "band_25": "No-trade band +/-25%",
+    "histgb_overlay": "HistGB sign-forecast sleeve, 30% (15y rolling, refit yearly, live from 1997)",
 }
 EXCLUSIVE = [{"smooth_leverage", "smooth_leverage_imbalance"}]
 POST_2015_DESIGN = {"half_short", "smooth_leverage", "smooth_leverage_imbalance"}
-SLEEVES = ("economic_trend", "factor_overlay")
+CLEAN_POOL = tuple(c for c in COMPONENTS if c not in POST_2015_DESIGN)
+SLEEVES = ("economic_trend", "factor_overlay", "histgb_overlay")
 ALL_COMPONENTS = frozenset(COMPONENTS) - {"smooth_leverage"}  # superset used by the look-ahead test
 
 
@@ -179,6 +185,25 @@ class Pipeline:
             return self.scale_to_target(econ.risk_weights(direction, self.sleeve_vol))
         return self._cached("factor", build)
 
+    def histgb_sleeve(self):
+        """rolling_sign_prediction.py forecasts (unchanged model and refit schedule), sized on EWMA vol.
+
+        prepare() drops formation months without a next-month label; a blank next-month row is
+        appended so the latest formation month still gets a forecast (it has no label, so it never
+        enters training). Without it the most recent position would be missing in live use.
+        """
+        def build():
+            from rolling_sign_prediction import rolling_predictions
+            from sign_return_prediction import prepare
+            nxt = (self.r.index[-1].to_period("M") + 1).to_timestamp("M")
+            padded = pd.concat([self.r, pd.DataFrame(np.nan, index=[nxt], columns=self.r.columns)])
+            padded.index.name = self.r.index.name
+            data, x, y, _, _ = prepare(padded)
+            prob = rolling_predictions(data, x, y, HISTGB_WINDOW)[0]
+            prob = prob.unstack("instrument").reindex(index=self.r.index, columns=self.r.columns)
+            return self.scale_to_target(econ.risk_weights(2 * prob - 1, self.sleeve_vol))
+        return self._cached("histgb", build)
+
     def turning_flags(self):
         def build():
             fast = np.sign(self.r.rolling(2, min_periods=2).sum())
@@ -195,10 +220,19 @@ class Pipeline:
             core = self.core(rb)
             if not sleeves:
                 return core
-            builders = {"economic_trend": self.economic_sleeve, "factor_overlay": self.factor_sleeve}
-            core_share = 1 - sum(SLEEVE_WEIGHT[s] for s in sleeves)
-            mix = core_share * core + sum(SLEEVE_WEIGHT[s] * builders[s]() for s in sleeves)
-            return self.retarget(mix)
+            builders = {"economic_trend": self.economic_sleeve, "factor_overlay": self.factor_sleeve,
+                        "histgb_overlay": self.histgb_sleeve}
+            # A sleeve with no positions at a date (e.g. HistGB before 1997) gives its share back to
+            # the core, and dates with no active sleeve keep the core unchanged (no re-targeting),
+            # so an inactive component is an exact no-op.
+            parts = {s: builders[s]() for s in sleeves}
+            share = {s: parts[s].abs().sum(axis=1).gt(0) * SLEEVE_WEIGHT[s] for s in sleeves}
+            core_share = 1 - sum(share.values())
+            mix = core.mul(core_share, axis=0) + sum(parts[s].mul(share[s], axis=0) for s in sleeves)
+            any_active = core_share.lt(1)
+            out = self.retarget(mix)
+            out.loc[~any_active] = core.loc[~any_active]
+            return out
         return self._cached(("targeted", rb, sleeves), build)
 
     def formed(self, config):
@@ -231,7 +265,8 @@ class Pipeline:
                              "turnover": traded, "gross_exposure": executed.abs().sum(axis=1)})
 
     def run(self, config):
-        return self.evaluate(self.executed(config))
+        config = frozenset(config)
+        return self._cached(("run", config), lambda: self.evaluate(self.executed(config)))
 
 
 def stats(series, start, end=None):
@@ -260,31 +295,80 @@ def compatible(config, candidate):
     return not any(candidate in group and config & group for group in EXCLUSIVE)
 
 
-def stepwise(pipe):
-    """Forward stepwise on IS net Sharpe. `pipe` must hold data through IS_END only."""
-    assert pipe.r.index.max() <= pd.Timestamp(IS_END), "selection must not see post-2014 data"
-    def is_sharpe(config):
-        return stats(pipe.run(config), IS_START, IS_END)["net_sharpe"]
+def stepwise(pipe, pool=tuple(COMPONENTS), start=IS_START, end=IS_END, verbose=True):
+    """Forward stepwise on net Sharpe over [start, end]. Only months <= end are ever scored."""
+    def sharpe(config):
+        return stats(pipe.run(config), start, end)["net_sharpe"]
 
-    current, current_sharpe = frozenset(), is_sharpe(frozenset())
+    current, current_sharpe = frozenset(), sharpe(frozenset())
     rows, step = [{"round": 0, "candidate": "(start: enhanced)", "is_net_sharpe": current_sharpe,
                    "delta_vs_current": 0.0, "best_in_round": True, "accepted": True, "combination": "enhanced"}], 1
     while True:
-        trials = {c: is_sharpe(current | {c}) for c in COMPONENTS if c not in current and compatible(current, c)}
+        trials = {c: sharpe(current | {c}) for c in pool if c not in current and compatible(current, c)}
         if not trials:
             break
         best = max(trials, key=trials.get)
         accept = trials[best] - current_sharpe >= THRESHOLD
-        for c, sharpe in sorted(trials.items(), key=lambda kv: -kv[1]):
-            rows.append({"round": step, "candidate": c, "is_net_sharpe": sharpe,
-                         "delta_vs_current": sharpe - current_sharpe, "best_in_round": c == best,
+        for c, value in sorted(trials.items(), key=lambda kv: -kv[1]):
+            rows.append({"round": step, "candidate": c, "is_net_sharpe": value,
+                         "delta_vs_current": value - current_sharpe, "best_in_round": c == best,
                          "accepted": accept and c == best, "combination": label(current | {c})})
-        print(f"round {step}: best {best} {trials[best]:.3f} (current {current_sharpe:.3f}) -> "
-              f"{'add' if accept else 'stop'}")
+        if verbose:
+            print(f"round {step}: best {best} {trials[best]:.3f} (current {current_sharpe:.3f}) -> "
+                  f"{'add' if accept else 'stop'}")
         if not accept:
             break
         current, current_sharpe, step = current | {best}, trials[best], step + 1
     return current, pd.DataFrame(rows)
+
+
+def return_year(index):
+    """Calendar year of the return month earned by each formation date."""
+    return pd.Series((index.to_period("M") + 1).year, index=index)
+
+
+def mixed_rebalance(formed, returns, band_flag, gross_cap=GROSS_CAP):
+    """cost_aware_rebalance.rebalance_path with the band switched on/off per formation month."""
+    targets = formed.fillna(0).shift(1).fillna(0)
+    flags = band_flag.reindex(formed.index).fillna(False).astype(bool).shift(1, fill_value=False).to_numpy()
+    r = returns.reindex_like(targets).fillna(0).to_numpy()
+    goal_all, held = targets.to_numpy(), np.zeros(targets.shape)
+    previous = np.zeros(targets.shape[1])
+    for t in range(len(goal_all)):
+        drifted = previous * (1 + r[t - 1]) / (1 + previous @ r[t - 1]) if t > 0 else previous
+        goal = goal_all[t]
+        w = np.clip(drifted, goal - BAND[1] * np.abs(goal), goal + BAND[1] * np.abs(goal)) if flags[t] else goal.copy()
+        gross = np.abs(w).sum()
+        if gross > gross_cap:
+            w *= gross_cap / gross
+        held[t] = w
+        previous = w
+    return pd.DataFrame(held, index=targets.index, columns=targets.columns)
+
+
+def walk_forward(pipe, pool, first_year=WF_FIRST_YEAR):
+    """Each Dec-31 close: stepwise on net Sharpe over Jan 1976 .. that date (expanding window), then
+    trade the chosen combination for the next 12 formation months. Months before first_year trade
+    `enhanced`. Relies on truncation invariance (tested): scores use only months <= the decision date."""
+    years = return_year(pipe.r.index)
+    last_year = int(years.max())
+    choice = {y: frozenset() for y in range(int(years.min()), first_year)}
+    decisions = []
+    for year in range(first_year, last_year + 1):
+        decision_date = f"{year - 1}-12-31"
+        selected, _ = stepwise(pipe, pool, IS_START, decision_date, verbose=False)
+        choice[year] = selected
+        decisions.append({"return_year": year, "decision_date": decision_date,
+                          "selected": " + ".join(c for c in COMPONENTS if c in selected) or "(enhanced only)",
+                          "window_net_sharpe": stats(pipe.run(selected), IS_START, decision_date)["net_sharpe"]})
+    formed = pd.DataFrame(0.0, index=pipe.r.index, columns=pipe.r.columns)
+    band = pd.Series(False, index=pipe.r.index)
+    for year, config in choice.items():
+        mask = years.eq(year).to_numpy()
+        formed.loc[mask] = pipe.formed(config).loc[mask].to_numpy()
+        band.loc[mask] = "band_25" in config
+    executed = mixed_rebalance(formed, pipe.r, band)
+    return formed, executed, pd.DataFrame(decisions)
 
 
 def main():
@@ -310,18 +394,37 @@ def main():
         got = stats(pipe.run(cfg), IS_START, IS_END)
         assert np.isclose(got["net_sharpe"], expected["net_sharpe"], atol=1e-10), "IS changed with OOS data"
 
+    # ---- phase 3: walk-forward selection (expanding window, annual reselection)
+    probe = pipe.formed(frozenset())
+    for flag, reference in ((True, rebalance_path(probe, returns, BAND, GROSS_CAP)), (False, probe.shift(1).fillna(0.0))):
+        np.testing.assert_allclose(mixed_rebalance(probe, returns, pd.Series(flag, index=probe.index)).to_numpy(),
+                                   reference.to_numpy(), atol=1e-12)
+    clean_2015, _ = stepwise(is_pipe, CLEAN_POOL, verbose=False)  # computed on data truncated at 2014
+    decisions = {}
+    for name, pool in (("walk_forward_clean", CLEAN_POOL), ("walk_forward_all", tuple(COMPONENTS))):
+        _, executed, decisions[name] = walk_forward(pipe, pool)
+        runs[name] = pipe.evaluate(executed)
+        executed.loc[IS_START:].to_csv(OUT / f"executed_weights_{name}.csv")
+    d2015 = decisions["walk_forward_clean"].set_index("return_year").loc[2015, "selected"]
+    assert d2015 == (" + ".join(c for c in COMPONENTS if c in clean_2015) or "(enhanced only)"), \
+        "walk-forward 2015 decision differs from selection on truncated data"
+    pd.concat(decisions, names=["run"]).reset_index(level=0).to_csv(OUT / "walk_forward_decisions.csv", index=False)
+
+    tainted = set(POST_2015_DESIGN) | {"walk_forward_all"} | ({"final"} if selected & POST_2015_DESIGN else set())
     rows = []
     for name, series in runs.items():
-        for period, (start, end) in {"IS 1976-2014": (IS_START, IS_END), "OOS 2015-2025": (OOS_START, None)}.items():
+        for period, (start, end) in PERIODS.items():
             rows.append({"strategy": name, "description": describe(name, configs), "period": period,
-                         "clean_oos": name not in POST_2015_DESIGN, **stats(series, start, end)})
+                         "clean_oos": name not in tainted, **stats(series, start, end)})
     results = pd.DataFrame(rows)
     results.to_csv(OUT / "is_vs_oos_performance.csv", index=False)
     pd.DataFrame({n: s.net for n, s in runs.items()}).loc[IS_START:].to_csv(OUT / "monthly_net_returns.csv")
     plot(runs, selected)
-    write_report(table, results, selected)
+    write_report(table, results, selected, decisions, tainted)
     view = results.pivot(index="strategy", columns="period", values="net_sharpe").loc[list(runs)]
-    print(view.round(3).to_string())
+    print(view[list(PERIODS)].round(3).to_string())
+    for name, d in decisions.items():
+        print(f"\n{name}\n" + d[["return_year", "selected"]].to_string(index=False))
 
 
 def describe(name, configs):
@@ -331,20 +434,27 @@ def describe(name, configs):
         return "EWMA vol + EWMA-covariance 10% target (start point)"
     if name == "final":
         return label(configs["final"])
+    if name == "walk_forward_clean":
+        return "Walk-forward selection, clean pool (expanding window, annual)"
+    if name == "walk_forward_all":
+        return "Walk-forward selection, all candidates incl. post-2015-designed rules"
     return "enhanced + " + COMPONENTS[name]
 
 
 def plot(runs, selected):
     fig, ax = plt.subplots(figsize=(12, 6.5))
+    main_lines = ("baseline", "enhanced", "final", "walk_forward_clean", "walk_forward_all")
     for name, series in runs.items():
-        if name in ("baseline", "enhanced", "final"):
+        if name in main_lines:
             continue
         ax.plot((1 + series.net.loc[IS_START:]).cumprod(), lw=0.8, alpha=0.35, color="grey")
-    styles = {"baseline": ("#7f7f7f", "--"), "enhanced": ("#1f77b4", "-"), "final": ("#d62728", "-")}
+    styles = {"baseline": ("#7f7f7f", "--"), "enhanced": ("#1f77b4", "-"), "final": ("#d62728", "-"),
+              "walk_forward_clean": ("#2ca02c", "-"), "walk_forward_all": ("#2ca02c", ":")}
     for name, (color, ls) in styles.items():
         lab = f"final: {label(selected)}" if name == "final" else name
         ax.plot((1 + runs[name].net.loc[IS_START:]).cumprod(), color=color, ls=ls, lw=1.8, label=lab)
     ax.plot([], [], color="grey", alpha=0.5, label="enhanced + one component")
+    ax.axvline(pd.Timestamp("1990-01-01"), color="#2ca02c", lw=0.8, ls="--")
     ax.axvspan(pd.Timestamp(OOS_START), runs["final"].index.max(), color="grey", alpha=0.15, label="out-of-sample")
     ax.set_yscale("log")
     ax.set_title("Wealth net of Lecture 8 costs at $1bn (log); shaded = Jan 2015 - May 2025 out-of-sample")
@@ -355,7 +465,7 @@ def plot(runs, selected):
     plt.close(fig)
 
 
-def write_report(table, results, selected):
+def write_report(table, results, selected, decisions, tainted):
     step_lines = ["| Round | Candidate | IS net Sharpe | Change vs current | Added |", "|---:|---|---:|---:|:---:|"]
     for r in table.itertuples():
         step_lines.append(f"| {r.round} | {r.candidate} | {r.is_net_sharpe:.3f} | {r.delta_vs_current:+.3f} | "
@@ -366,11 +476,23 @@ def write_report(table, results, selected):
             ("annual_turnover", "Turnover", "{:.1f}"), ("annual_cost_drag", "Cost drag", "{:.2%}")]
     perf = ["| Strategy | " + " | ".join(f"IS {c[1]} | OOS {c[1]}" for c in cols) + " |",
             "|---|" + "---:|" * (2 * len(cols))]
+    get = lambda name, period: results[(results.strategy == name) & (results.period == period)].iloc[0]
     for name in results.strategy.unique():
-        a = results[(results.strategy == name) & (results.period == "IS 1976-2014")].iloc[0]
-        b = results[(results.strategy == name) & (results.period == "OOS 2015-2025")].iloc[0]
-        tag = name + (" †" if name in POST_2015_DESIGN else "")
+        if name.startswith("walk_forward"):
+            continue
+        a, b = get(name, "IS 1976-2014"), get(name, "OOS 2015-2025")
+        tag = name + (" †" if name in tainted else "")
         perf.append(f"| {tag} | " + " | ".join(f"{f.format(a[k])} | {f.format(b[k])}" for k, _, f in cols) + " |")
+    wf_rows = ["| Strategy | " + " | ".join(f"1990-2014 {c[1]} | OOS {c[1]}" for c in cols) + " |",
+               "|---|" + "---:|" * (2 * len(cols))]
+    for name in ("baseline", "enhanced", "final", "walk_forward_clean", "walk_forward_all"):
+        a, b = get(name, "WF 1990-2014"), get(name, "OOS 2015-2025")
+        tag = name + (" †" if name in tainted else "")
+        wf_rows.append(f"| {tag} | " + " | ".join(f"{f.format(a[k])} | {f.format(b[k])}" for k, _, f in cols) + " |")
+    merged = decisions["walk_forward_clean"][["return_year", "selected"]].merge(
+        decisions["walk_forward_all"][["return_year", "selected"]], on="return_year", suffixes=("_clean", "_all"))
+    choice_rows = ["| Return year | Clean pool selects | All-candidates pool selects † |", "|---:|---|---|"]
+    choice_rows += [f"| {r.return_year} | {r.selected_clean} | {r.selected_all} |" for r in merged.itertuples()]
     final_tainted = sorted(POST_2015_DESIGN & set(selected))
     report = f"""# Combined strategy: in-sample selection, out-of-sample evaluation
 
@@ -411,6 +533,32 @@ Turnover is annual drift-adjusted traded notional (x NAV).
 † Designed after the 2015-2025 data had been examined (half-short rule, exposure smoothing): their OOS
 columns are **not a clean out-of-sample test**.{" The final combination contains " + ", ".join(final_tainted) + ", so its OOS result is not clean either." if final_tainted else " None of these entered the final combination."}
 
+## Walk-forward selection
+
+The one-shot selection above fixes the combination once, using all of 1976-2014. As a test of the
+selection *procedure*, the same stepwise rule (+{THRESHOLD} net Sharpe threshold) is rerun at every Dec-31
+close on an expanding window from Jan 1976 to that date, and the chosen combination is traded for the next
+12 formation months. Switching combinations is traded and charged through the cost model; the no-trade
+band applies only in months whose combination includes `band_25`. The window type (expanding), first
+traded year ({WF_FIRST_YEAR}) and candidate pools were fixed before any walk-forward result was computed.
+
+- **Clean pool:** {", ".join(CLEAN_POOL)} (excludes the rules designed after viewing 2015+ data).
+- **All-candidates pool †:** also half_short and the smoothing rules; its 2015+ results are not clean.
+- 1990-2014 decisions are causal, but the component designs themselves were developed on data covering
+  that period, so it is a pseudo-out-of-sample check; 2015-2025 is the out-of-sample period.
+- Blending rule: a sleeve with no positions at a date returns its share to the core, and dates with no
+  active sleeve keep the core unchanged. This was corrected after a first walk-forward run showed the
+  inactive (pre-1997) HistGB sleeve being "selected" only because its unused 30% share rescaled the
+  portfolio. It is a correctness fix (an inactive component must be a no-op), not a tuned parameter, but
+  it was made after seeing that run.
+- Scores at each decision date use only months up to that date; this relies on truncation invariance,
+  verified by `test_lookahead.py`, and the 2015 decision is asserted equal to a selection run on data
+  truncated at Dec 2014.
+
+{chr(10).join(wf_rows)}
+
+{chr(10).join(choice_rows)}
+
 ![Wealth, IS vs OOS](combined_wealth_is_vs_oos.png)
 
 ## Caveats
@@ -424,6 +572,12 @@ columns are **not a clean out-of-sample test**.{" The final combination contains
   GS2 and BAA10Y monthly averages of daily data, known at month-end.
 - **Turning point.** Flags use only trailing 2- and 12-month return sums and the macro vote; no
   smoothing, filtering or ex-post peak/trough dating.
+- **HistGB sleeve.** `rolling_sign_prediction.py` model and schedule unchanged (15-year rolling window,
+  refit before each return year, labels strictly before the first formation date, forecasts from 1997;
+  window and 30% weight chosen on 2000-2004 validation). It is inactive before 1997, so it cannot add
+  in-sample Sharpe in 1976-1996. Feature eligibility uses `economic_trend.instrument_vol` as in the
+  original; sizing uses EWMA vol like the other sleeves. The most recent formation month is kept for
+  forecasting (the original `prepare` drops it because it has no label yet).
 - **Costs after 2014.** Daily volume ends Dec 2014, so OOS liquidity uses the asset-class ADV constants.
 - **Look-ahead test.** `python -m unittest test_lookahead.py` truncates returns and macro files at 1990-06,
   2014-12 and 2020-03 and checks that the final and all-components pipelines give identical weights and
