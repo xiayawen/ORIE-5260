@@ -2,7 +2,7 @@
 
 ## Abstract
 
-We evaluate a diversified futures portfolio against a daily-data implementation of the course time-series momentum baseline. The enhancement combines a 252-trading-day price-trend signal (30% signal budget), five economic themes (20%), a cross-sectional negative-skewness signal (20%) and a frozen Extra Trees forecast (30%). The blended book is scaled to 10% ex-ante volatility with a 252-day daily covariance matrix and fully rebalanced every 21 business days; like the baseline, it has no exposure caps. On matched 21-business-day periods, the enhancement has a higher net Sharpe ratio than the baseline in both 1976–2014 (1.285 vs 1.222) and 2015–May 2025 (0.343 vs 0.243), with lower volatility and a higher later-period net return (3.57% vs 3.24%). The in-sample difference is small relative to its standard error, and the enhancement's in-sample drawdown is deeper than the baseline's. 
+We evaluate a diversified futures portfolio against a daily-data implementation of the course time-series momentum baseline. The enhancement combines a 252-trading-day price-trend signal (30% signal budget), five economic themes (20%), a cross-sectional negative-skewness signal (20%) and a frozen Extra Trees forecast (30%). The blended book is scaled to 10% ex-ante volatility with a 252-day daily covariance matrix and fully rebalanced every 21 business days; like the baseline, it has no exposure caps. On matched 21-business-day periods, the enhancement has a higher net Sharpe ratio than the baseline in both 1976–2014 (1.285 vs 1.222) and 2015–May 2025 (0.343 vs 0.243), with lower volatility and a higher later-period net return (3.57% vs 3.24%). 
 
 ## 1. Research question and data
 
