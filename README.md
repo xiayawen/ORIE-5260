@@ -154,6 +154,22 @@ The turning-point enhancement uses **Method 1 plus macro confirmation**. Explora
 
 ## Additional tradable futures factors
 
+Fair-constraint baselines, conditional ablations and return/cost/risk allocation
+are in `optimize_combined_portfolio.py` and
+[PORTFOLIO_OPTIMIZATION_REPORT.md](PORTFOLIO_OPTIMIZATION_REPORT.md).
+The new engine centralizes gross/net/volatility/class-risk limits and prices
+netted trades. Pre-2015 validation selects a fixed four-sleeve allocation with
+cost-aware execution, not the fitted allocation. This is a separate descriptive
+research engine; legacy strategy selection and results remain unchanged.
+
+Our frozen Extra Trees classifiers are now optional components of the combined
+team pipeline: `extratrees_overlay` (66 original features) and
+`extratrees_crossasset_overlay` (86 including cross-asset signals). They replace
+the30% HistGB slot rather than stack with it. See
+[INTEGRATED_FACTOR_MODELS_REPORT.md](INTEGRATED_FACTOR_MODELS_REPORT.md) and run
+`integrate_team_factor_models.py`. Legacy default candidate pools are preserved;
+the integration is an explicit, descriptive comparison with matched team rules.
+
 Ten cross-asset exposure/lag-response candidates are evaluated in
 `cross_asset_factor_research.py`; see
 [CROSS_ASSET_FACTOR_REPORT.md](CROSS_ASSET_FACTOR_REPORT.md). They use complete
@@ -587,3 +603,9 @@ python -m unittest test_lookahead.py
 ## Dependencies
 
 Use Python with `numpy`, `pandas`, `matplotlib`, `scipy`, `statsmodels`, and `openpyxl`. Run commands from the project root so data and output paths resolve correctly.
+
+## Staged portfolio improvement research
+
+Run `python improve_combined_portfolio.py` to compare risk limits, monthly execution, trend-heavy allocations, five factor hypotheses and four model configurations. Choices use three consecutive validation blocks in 2005–November 2014 and are saved before later-period evaluation. Post-2014 results are previously inspected research data, not an untouched holdout. See [PORTFOLIO_IMPROVEMENT_REPORT.md](PORTFOLIO_IMPROVEMENT_REPORT.md).
+
+Run `python -m unittest test_portfolio_improvement test_unified_portfolio` for execution, feasibility, accounting and selection-causality checks.

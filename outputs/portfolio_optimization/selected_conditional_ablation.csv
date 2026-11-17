@@ -1,0 +1,9 @@
+strategy,period,months,annual_mean,net_sharpe
+ValidationSelected,validation_diagnostic,59,0.03604194742168792,1.3365058053507857
+ValidationSelected,later_diagnostic,125,0.01407339392493203,0.3558304951119663
+ValidationSelected_without_Macro,validation_diagnostic,59,0.03253894576406026,1.3343215275953209
+ValidationSelected_without_Macro,later_diagnostic,125,0.013864286725058763,0.3288727168601607
+ValidationSelected_without_Factor,validation_diagnostic,59,0.0151530211186212,0.8935556416792909
+ValidationSelected_without_Factor,later_diagnostic,125,0.014922142997983705,0.49126244546157555
+ValidationSelected_without_ML,validation_diagnostic,59,0.03316048197196365,0.8738694031251788
+ValidationSelected_without_ML,later_diagnostic,125,0.005548658723766661,0.13280849470350206

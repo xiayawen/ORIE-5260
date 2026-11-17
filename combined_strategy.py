@@ -73,6 +73,7 @@ MACRO_DIR = ROOT / "macro_data"
 TARGET = 0.10
 THRESHOLD = 0.05
 SLEEVE_WEIGHT = {"economic_trend": econ.ENHANCED_WEIGHT, "factor_overlay": 0.20, "histgb_overlay": 0.30}
+SLEEVE_WEIGHT.update({"extratrees_overlay":0.30,"extratrees_crossasset_overlay":0.30})
 FACTOR = "NegativeSkew_12m"
 HISTGB_WINDOW = 15        # rolling_sign_prediction.py: 15y window and 30% blend chosen on 2000-2004 validation
 WF_FIRST_YEAR = 1990      # first return year traded with a walk-forward selection (fixed in advance)
@@ -97,6 +98,14 @@ COMPONENTS = {
 }
 # risk_budget sizes on signal signs only, so it cannot use a continuous signal.
 EXCLUSIVE = [{"smooth_leverage", "smooth_leverage_imbalance"}, {"risk_budget", "continuous_signal"}]
+# Alternative ML sleeves replace one another; they must not consume multiple
+# 30% budgets. Keep them outside COMPONENTS/default searches so old selection
+# outputs and candidate pools are unchanged.
+OPTIONAL_COMPONENTS={
+    "extratrees_overlay":"Frozen Extra Trees: original 31 signals, ranks + classes (66 features)",
+    "extratrees_crossasset_overlay":"Frozen Extra Trees: original + 10 cross-asset signals (86 features)",
+}
+EXCLUSIVE.append({"histgb_overlay",*OPTIONAL_COMPONENTS})
 # Requested after the final selection was known; reported for information, never selected.
 SENSITIVITY = {"sensitivity_cont_econ": frozenset({"continuous_signal", "economic_trend"})}
 SLIDE_BPS = 2.0          # Lecture 11 convention: 2 bps per unit turnover + 4 rolls/yr at 2 bps
@@ -105,7 +114,7 @@ PRIMARY = "slide_2bps"    # headline and selection cost convention (course spec)
 SLIDE_TARGET = 0.11       # Lecture 11 slide 21: 11% ex-ante vol target
 POST_2015_DESIGN = {"half_short", "smooth_leverage", "smooth_leverage_imbalance"}
 CLEAN_POOL = tuple(c for c in COMPONENTS if c not in POST_2015_DESIGN)
-SLEEVES = ("economic_trend", "factor_overlay", "histgb_overlay")
+SLEEVES = ("economic_trend", "factor_overlay", "histgb_overlay",*OPTIONAL_COMPONENTS)
 # Supersets used by the look-ahead test (one per mutually exclusive core).
 ALL_COMPONENTS = frozenset(COMPONENTS) - {"smooth_leverage", "continuous_signal"}
 ALL_COMPONENTS_CONTINUOUS = frozenset(COMPONENTS) - {"smooth_leverage", "risk_budget"}
@@ -244,8 +253,24 @@ class Pipeline:
             return disagreement, four_of_five_opposition(features)
         return self._cached("turning", build)
 
+    def extratrees_forecast_data(self):
+        """Shared 66/86 forecasts and exact training audit; causal fixed fits."""
+        from combined_factor_models import extratrees_forecasts
+        return self._cached("extratrees_forecasts",lambda:extratrees_forecasts(self.r))
+
+    def extratrees_sleeve(self,crossasset=False):
+        """Replace HistGB with our frozen sign probabilities; reuse branch sizing."""
+        name="Extended86" if crossasset else "Existing66"
+        def build():
+            prob=self.extratrees_forecast_data()[0][name]
+            return self.scale_to_target(econ.risk_weights(2*prob-1,self.sleeve_vol))
+        return self._cached(("extratrees_sleeve",name),build)
+
     # ---------------------------------------------------------------- pipeline
     def targeted(self, config):
+        config=frozenset(config)
+        if any(len(config&group)>1 for group in EXCLUSIVE):
+            raise ValueError("Mutually exclusive core, smoothing or ML components")
         rb = "risk_budget" in config
         cont = "continuous_signal" in config
         sleeves = tuple(s for s in SLEEVES if s in config)
@@ -254,7 +279,9 @@ class Pipeline:
             if not sleeves:
                 return core
             builders = {"economic_trend": self.economic_sleeve, "factor_overlay": self.factor_sleeve,
-                        "histgb_overlay": self.histgb_sleeve}
+                        "histgb_overlay": self.histgb_sleeve,
+                        "extratrees_overlay":self.extratrees_sleeve,
+                        "extratrees_crossasset_overlay":lambda:self.extratrees_sleeve(True)}
             # A sleeve with no positions at a date (e.g. HistGB before 1997) gives its share back to
             # the core, and dates with no active sleeve keep the core unchanged (no re-targeting),
             # so an inactive component is an exact no-op.
@@ -341,7 +368,7 @@ def stats(series, start, end=None, convention=PRIMARY):
 
 
 def label(config):
-    return "enhanced" if not config else "enhanced + " + " + ".join(c for c in COMPONENTS if c in config)
+    return "enhanced" if not config else "enhanced + " + " + ".join(c for c in (*COMPONENTS,*OPTIONAL_COMPONENTS) if c in config)
 
 
 def compatible(config, candidate):
