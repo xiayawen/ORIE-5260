@@ -1,6 +1,6 @@
 # Cost-convention comparison
 
-`slide_baseline` is the official baseline (Lecture 11 replica: binary 12-month signal, 1/(12-month vol)/N with no floor, 10% target on trailing 36-month realized vol, no caps). `slide_baseline_exante` is the literal slide-21 reading (11% ex-ante target on the EWMA-covariance forecast); it overshoots slide 21 on vol, turnover and leverage. `baseline` is the Lecture 6 course baseline used in the midterm.
+`slide_baseline` is the official baseline (Lecture 11 slide 21, literal reading: binary 12-month signal, 1/(12-month vol)/N with no floor, 11% ex-ante target on the 6-month-half-life EWMA-covariance forecast, no caps). `slide_baseline_realized` is the alternative replica (10% target on trailing 36-month realized vol); it matches slide-21 turnover exactly. `baseline` is the Lecture 6 course baseline used in the midterm.
 
 Selection used Lecture 11: 2 bps + 4 rolls/yr; Lecture 8 model, $1bn is a robustness check.
 
@@ -8,8 +8,8 @@ Selection used Lecture 11: 2 bps + 4 rolls/yr; Lecture 8 model, $1bn is a robust
 
 | Strategy | IS Sharpe | OOS Sharpe | OOS gross Sharpe | IS vol | OOS vol | OOS Max DD | OOS leverage | OOS imbalance | OOS names | OOS turnover | OOS cost drag |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| slide_baseline | 1.18 | 0.08 | 0.20 | 10.2% | 10.6% | -22.5% | 9.2x | +4.0x | 56.1 | 28.6 | 1.30% |
-| slide_baseline_exante | 1.23 | 0.04 | 0.18 | 12.5% | 12.6% | -24.6% | 11.0x | +4.3x | 56.1 | 43.7 | 1.75% |
+| slide_baseline | 1.23 | 0.04 | 0.18 | 12.5% | 12.6% | -24.6% | 11.0x | +4.3x | 56.1 | 43.7 | 1.75% |
+| slide_baseline_realized | 1.18 | 0.08 | 0.20 | 10.2% | 10.6% | -22.5% | 9.2x | +4.0x | 56.1 | 28.6 | 1.30% |
 | baseline | 0.93 | -0.08 | -0.02 | 11.1% | 11.1% | -32.6% | 4.4x | +0.7x | 56.1 | 12.5 | 0.60% |
 | enhanced | 1.07 | -0.01 | 0.07 | 9.5% | 7.1% | -14.4% | 3.9x | +0.8x | 56.1 | 12.8 | 0.56% |
 | continuous_signal | 1.13 | 0.12 | 0.20 | 10.1% | 7.5% | -11.9% | 3.7x | +0.9x | 56.1 | 15.3 | 0.60% |
@@ -23,8 +23,8 @@ Selection used Lecture 11: 2 bps + 4 rolls/yr; Lecture 8 model, $1bn is a robust
 
 | Strategy | IS Sharpe | OOS Sharpe | OOS gross Sharpe | IS vol | OOS vol | OOS Max DD | OOS leverage | OOS imbalance | OOS names | OOS turnover | OOS cost drag |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| slide_baseline | 1.15 | 0.08 | 0.20 | 10.2% | 10.6% | -22.2% | 9.2x | +4.0x | 56.1 | 29.1 | 1.24% |
-| slide_baseline_exante | 1.18 | 0.03 | 0.18 | 12.5% | 12.7% | -24.7% | 11.0x | +4.3x | 56.1 | 43.7 | 1.84% |
+| slide_baseline | 1.18 | 0.03 | 0.18 | 12.5% | 12.7% | -24.7% | 11.0x | +4.3x | 56.1 | 43.7 | 1.84% |
+| slide_baseline_realized | 1.15 | 0.08 | 0.20 | 10.2% | 10.6% | -22.2% | 9.2x | +4.0x | 56.1 | 29.1 | 1.24% |
 | baseline | 0.89 | -0.09 | -0.02 | 11.1% | 11.1% | -33.1% | 4.4x | +0.7x | 56.1 | 13.3 | 0.78% |
 | enhanced | 1.02 | -0.01 | 0.07 | 9.4% | 7.1% | -15.0% | 3.9x | +0.8x | 56.1 | 12.8 | 0.60% |
 | continuous_signal | 1.10 | 0.13 | 0.20 | 10.1% | 7.5% | -12.3% | 3.7x | +0.9x | 56.1 | 15.3 | 0.59% |

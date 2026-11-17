@@ -19,8 +19,9 @@ from risk_budgeting import read_full_sample_returns
 
 # (tier, key, short name, how it is built, convention)
 ROWS = [
-    ("Main", "slide_baseline", "Baseline (Lecture 11 replica)", None, "slide_2bps"),
+    ("Main", "slide_baseline", "Baseline (Lecture 11, 11% ex-ante target)", None, "slide_2bps"),
     ("Main", "final", "Final: enhanced + continuous signal", FINAL, "slide_2bps"),
+    ("Robustness", "slide_baseline_realized", "Baseline variant: 10% on 36m realized vol", None, "slide_2bps"),
     ("Robustness", "course_baseline", "Course baseline (Lecture 6, midterm)", None, "slide_2bps"),
     ("Robustness", "enhanced", "Enhanced (without continuous signal)", frozenset(), "slide_2bps"),
     ("Robustness", "walk_forward", "Walk-forward selection, clean pool", None, "slide_2bps"),
@@ -29,19 +30,30 @@ ROWS = [
 ]
 
 EXPLANATIONS = {
-    "slide_baseline": """**What it is.** Our replica of the course baseline in Lecture 11 (slides 17-21). Each month, every
-market gets a +1/-1 position from the sign of its past 12-month return, sized by 1/(12-month volatility) and
-divided by the number of markets, so each market contributes roughly equal risk. The whole book is then scaled
-so that the strategy's trailing 36-month realized volatility is 10%. There is no leverage cap and no volatility
-floor. Costs follow slides 17-19 exactly.
+    "slide_baseline": """**What it is.** The course baseline of Lecture 11 (slides 17-21), implemented as the slides state it.
+Each month, every market gets a +1/-1 position from the sign of its past 12-month return, sized by 1/(12-month
+volatility) and divided by the number of markets, so each market contributes roughly equal risk. The whole book
+is then scaled so that its *predicted* (ex-ante) volatility is 11%, using a 6-month-half-life EWMA covariance
+matrix estimated on returns up to the formation date. There is no leverage cap and no volatility floor. Costs
+follow slides 17-19 exactly.
 
-**Why it is the benchmark.** The report guidelines ask for a baseline "broadly aligned" with the slides. It
-reproduces slide 21's in-sample turnover exactly (13.42) and is close on Sharpe (1.18 vs 1.13), volatility,
-leverage (4.6x vs 4.0x) and number of names. It does not reproduce slide 30's out-of-sample Sharpe (0.08 vs
-0.31); the remaining gap is most likely the professor's daily data, which we do not have after 2014.
+**Why it is the benchmark.** The report guidelines ask for a baseline "broadly aligned" with the slides, and this
+follows slide 21's stated rule (11% ex-ante target) literally. In-sample Sharpe is close to slide 21 (1.23 vs
+1.13). Because our covariance forecast uses monthly data, it tends to under-predict risk: realized volatility is
+about 12.5% rather than 11%, and turnover (21.8 vs 13.42) and leverage (5.7x vs 4.0x) are above slide 21. It
+does not reproduce slide 30's out-of-sample Sharpe (0.04 vs 0.31); the professor's forecast most likely uses
+daily data, which we do not have after 2014.
 
-**Watch-outs.** Out of sample its leverage rises to about 9x with a 4x net long, mostly in low-volatility
-interest-rate futures: its returns depend on leverage that a real fund would find hard to finance.""",
+**Watch-outs.** Out of sample its leverage rises to about 11x with a 4x net long, mostly in low-volatility
+interest-rate futures, and turnover doubles (about 44): its returns depend on leverage that a real fund would
+find hard to finance, and costs absorb most of its gross return.""",
+
+    "slide_baseline_realized": """**What it is.** The same positions as the baseline, but the whole book is scaled to 10% using the
+strategy's trailing 36-month *realized* volatility instead of an ex-ante covariance forecast. No caps.
+
+**Why it is shown.** It is the closest match to slide 21's in-sample statistics on monthly data: turnover 13.42
+(exactly slide 21's), volatility 10.2%, leverage 4.5x, Sharpe 1.18. Out of sample it gives 0.08 Sharpe. It shows
+that the baseline-vs-final comparison does not depend on which reading of the slide-21 volatility target is used.""",
 
     "final": """**What it is.** Our enhanced strategy. Three changes to the baseline, in this order:
 1. *Continuous signal* (Lecture 11 slide 24): instead of +1/-1, each market's signal is its 12-month return
@@ -57,10 +69,11 @@ forward stepwise rule on 1976-2014 data only: a component is added if it raises 
 least 0.05. Only the continuous signal passed (+0.06). The out-of-sample period was evaluated once, afterwards.
 
 **Result.** Same in-sample Sharpe as slide 21's baseline (1.13) with about a quarter less leverage (2.9x vs
-4.0x). Slightly below our baseline replica in-sample (1.13 vs 1.18), with a deeper in-sample drawdown
-(-16.5% vs -13.0%), mainly because the 4x cap limits the rate-futures leverage that paid off before 2015.
-Out of sample it does better (0.12 vs 0.08) with about half the baseline's drawdown and leverage. The
-out-of-sample gain is not statistically significant (Sharpe standard error about 0.3).""",
+4.0x). Below our baseline in-sample (1.13 vs 1.23), mainly because the baseline runs about twice the leverage
+(5.7x vs 2.9x) with no cap, and rate-futures leverage paid off before 2015; in-sample drawdowns are similar
+(-16.5% vs -16.0%). Out of sample it does better (0.12 vs 0.04) with about half the baseline's drawdown
+(-11.9% vs -24.6%), a third of its leverage and a third of its turnover. The out-of-sample gain is not
+statistically significant (Sharpe standard error about 0.3).""",
 
     "course_baseline": """**What it is.** The baseline from Lecture 6 that we used in the midterm: +1/-1 12-month signal,
 position = 40% / (volatility estimated on all past data, at least 36 months) / number of markets, no
@@ -74,8 +87,8 @@ it sizes with slow, expanding-window volatility and never re-targets total risk,
 EWMA-covariance 10% risk target with a 4x cap. It is the starting point of the stepwise selection.
 
 **Why it is shown.** It isolates the contribution of the continuous signal: in-sample +0.06 Sharpe, out of
-sample from about zero to 0.12. Without it, the risk-control changes alone do not beat the baseline replica
-in-sample (1.07 vs 1.18), mainly because of the 4x leverage cap (see the diagnosis in the report).""",
+sample from about zero to 0.12. Without it, the risk-control changes alone do not beat the baseline
+in-sample (1.07 vs 1.23), mainly because of the 4x leverage cap (see the diagnosis in the report).""",
 
     "walk_forward": """**What it is.** The same stepwise rule, re-run every December 31 from 1989 onward using only data
 available up to that date (expanding window from 1976), with the chosen combination traded for the next
@@ -100,6 +113,7 @@ def main():
     pipe = Pipeline(returns)
     series = {
         "slide_baseline": pipe.evaluate(pipe.slide_baseline().shift(1).fillna(0.0)),
+        "slide_baseline_realized": pipe.evaluate(pipe.slide_baseline_realized().shift(1).fillna(0.0)),
         "course_baseline": pipe.evaluate(pipe.course_baseline().shift(1).fillna(0.0)),
         "walk_forward": pipe.evaluate(walk_forward(pipe, CLEAN_POOL)[1]),
     }

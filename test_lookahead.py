@@ -108,9 +108,10 @@ class CombinedStrategyTruncation(unittest.TestCase):
                                                    self.full.executed(config).loc[idx].to_numpy(), atol=1e-10)
                         np.testing.assert_allclose(short.run(config).to_numpy(),
                                                    self.full.run(config).loc[idx].to_numpy(), atol=1e-10)
-                with self.subTest(cut=cut, config="slide_baseline"):
-                    np.testing.assert_allclose(short.slide_baseline().to_numpy(),
-                                               self.full.slide_baseline().loc[short.r.index].to_numpy(), atol=1e-10)
+                for method in ("slide_baseline", "slide_baseline_realized"):
+                    with self.subTest(cut=cut, config=method):
+                        np.testing.assert_allclose(getattr(short, method)().to_numpy(),
+                                                   getattr(self.full, method)().loc[short.r.index].to_numpy(), atol=1e-10)
                 with self.subTest(cut=cut, config="walk_forward_clean"):
                     from combined_strategy import walk_forward, CLEAN_POOL
                     _, short_exec, short_dec = walk_forward(short, CLEAN_POOL)

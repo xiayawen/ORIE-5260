@@ -174,22 +174,22 @@ class Pipeline:
         return self._cached("course", lambda: tsmom_weights(self.signal, self.exp_vol, self.asset_map).fillna(0))
 
     def slide_baseline(self):
-        """Official baseline (Lecture 11 replica): binary 12m signal, 1/(12m vol)/N with no floor, book
-        scaled to 10% on trailing 36m realized strategy vol (economic_trend.price_trend_weights), no caps.
-        Chosen over the literal 11% ex-ante version because it matches slide 21's IS statistics more
-        closely (turnover 13.42 exactly, leverage, vol, Sharpe)."""
-        vol = self.r.rolling(12, min_periods=12).std() * np.sqrt(12)
-        return self._cached("slide", lambda: econ.price_trend_weights(self.r, vol).fillna(0))
-
-    def slide_baseline_exante(self):
-        """Literal slide-21 reading: same positions, 11% ex-ante target on the EWMA-covariance forecast,
-        no caps. Overshoots slide 21 on vol, turnover and leverage; reported for transparency."""
+        """Official baseline (Lecture 11 slide 21, literal reading): binary 12m signal, 1/(12m vol)/N with
+        no floor, whole book scaled each month to an 11% ex-ante vol target using the 6m-half-life EWMA
+        covariance forecast through t, no leverage or scale caps."""
         def build():
             vol = self.r.rolling(12, min_periods=12).std() * np.sqrt(12)
             raw = econ.risk_weights(np.sign(self.r.rolling(12, min_periods=12).sum()), vol)
             forecast = ewma_forecast(self.r, raw)
             return raw.mul((SLIDE_TARGET / forecast).where(forecast > 0, 0.0).fillna(0.0), axis=0)
-        return self._cached("slide_exante", build)
+        return self._cached("slide", build)
+
+    def slide_baseline_realized(self):
+        """Alternative Lecture 11 replica: same positions, book scaled to 10% on trailing 36m realized
+        strategy vol (economic_trend.price_trend_weights), no caps. Matches slide 21 IS turnover (13.42)
+        exactly; reported for comparison."""
+        vol = self.r.rolling(12, min_periods=12).std() * np.sqrt(12)
+        return self._cached("slide_realized", lambda: econ.price_trend_weights(self.r, vol).fillna(0))
 
     def core(self, risk_budget, continuous=False):
         if risk_budget:
@@ -471,7 +471,7 @@ def main():
                **SENSITIVITY}
     runs = {"baseline": pipe.evaluate(pipe.course_baseline().shift(1).fillna(0.0)),
             "slide_baseline": pipe.evaluate(pipe.slide_baseline().shift(1).fillna(0.0)),
-            "slide_baseline_exante": pipe.evaluate(pipe.slide_baseline_exante().shift(1).fillna(0.0))}
+            "slide_baseline_realized": pipe.evaluate(pipe.slide_baseline_realized().shift(1).fillna(0.0))}
     runs.update({name: pipe.run(cfg) for name, cfg in configs.items()})
     for cfg, expected in is_check.items():  # IS numbers must not move when post-2014 data are added
         got = stats(pipe.run(cfg), IS_START, IS_END)
@@ -517,15 +517,15 @@ def main():
 
 def write_convention_section(all_results, tainted):
     """Like-for-like comparison with the Lecture 11 baseline under both cost conventions."""
-    names = ["slide_baseline", "slide_baseline_exante", "baseline", "enhanced", "continuous_signal", "band_25",
+    names = ["slide_baseline", "slide_baseline_realized", "baseline", "enhanced", "continuous_signal", "band_25",
              "histgb_overlay", "final", *SENSITIVITY, "walk_forward_clean"]
     get = lambda n, p, c: all_results[(all_results.strategy == n) & (all_results.period == p)
                                       & (all_results.costs == c)].iloc[0]
     lines = ["# Cost-convention comparison", "",
-             "`slide_baseline` is the official baseline (Lecture 11 replica: binary 12-month signal, 1/(12-month "
-             "vol)/N with no floor, 10% target on trailing 36-month realized vol, no caps). "
-             "`slide_baseline_exante` is the literal slide-21 reading (11% ex-ante target on the EWMA-covariance "
-             "forecast); it overshoots slide 21 on vol, turnover and leverage. "
+             "`slide_baseline` is the official baseline (Lecture 11 slide 21, literal reading: binary 12-month "
+             "signal, 1/(12-month vol)/N with no floor, 11% ex-ante target on the 6-month-half-life EWMA-covariance "
+             "forecast, no caps). `slide_baseline_realized` is the alternative replica (10% target on trailing "
+             "36-month realized vol); it matches slide-21 turnover exactly. "
              "`baseline` is the Lecture 6 course baseline used in the midterm.", "",
              f"Selection used {CONVENTIONS[PRIMARY]}; {CONVENTIONS['lecture8']} is a robustness check.", ""]
     for convention, title in CONVENTIONS.items():
@@ -553,9 +553,9 @@ def describe(name, configs):
     if name == "baseline":
         return "Course baseline (40%/expanding vol, 1/N, no target)"
     if name == "slide_baseline":
-        return "Official baseline, Lecture 11 replica (12m vol, no floor, 10% target on 36m realized vol, no caps)"
-    if name == "slide_baseline_exante":
-        return "Literal slide-21 reading (12m vol, no floor, 11% ex-ante EWMA-covariance target, no caps)"
+        return "Official baseline, Lecture 11 slide 21 (12m vol, no floor, 11% ex-ante EWMA-covariance target, no caps)"
+    if name == "slide_baseline_realized":
+        return "Alternative Lecture 11 replica (12m vol, no floor, 10% target on 36m realized vol, no caps)"
     if name == "enhanced":
         return "EWMA vol + EWMA-covariance 10% target (start point)"
     if name == "final":
@@ -596,7 +596,7 @@ def plot(runs, selected):
 def plot_smile(runs, sp, selected):
     """Lecture 11 slide 22: quarterly strategy returns by S&P 500 futures quarterly-return decile,
     annualized (x4). IS = 1982 (SP start) - 2014; OOS = 2015 - 2025."""
-    names = {"slide_baseline": "Baseline (Lecture 11)", "final": f"Final: {label(selected)}"}
+    names = {"slide_baseline": "Baseline (Lecture 11, 11% ex-ante)", "final": f"Final: {label(selected)}"}
     quarterly = lambda x: (1 + x).resample("QE").prod(min_count=1) - 1
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.5), sharey=True)
     rows = []
@@ -678,11 +678,13 @@ slides 17-19, exact turnover formula) unless stated; {CONVENTIONS['lecture8']} i
 
 ## Baseline alignment (Lecture 11 slides 21 and 30)
 
-`Baseline` = Lecture 11 replica: binary 12-month signal, 1/(12-month vol)/N with no floor, 10% target on
-the trailing 36-month realized strategy vol, no leverage cap, monthly rebalance. A literal 11% ex-ante target on
-our monthly EWMA-covariance forecast (`slide_baseline_exante`) was also tried: IS vol 12.5%, turnover 21.8,
-leverage 5.75, i.e. further from slide 21 than this replica, which matches slide-21 turnover (13.42) exactly.
-The replica was chosen on that IS match, after both versions' OOS results had been seen. Slide 30 uses daily data
+`Baseline` = Lecture 11 slide 21 taken literally: binary 12-month signal, 1/(12-month vol)/N with no floor,
+whole book scaled each month to an **11% ex-ante** volatility target using the 6-month-half-life EWMA
+covariance forecast, no leverage cap, monthly rebalance. On monthly data the forecast runs hot: realized IS vol
+is about 12.5% rather than 11%, and turnover and leverage are above slide 21. An alternative replica that scales
+to 10% on trailing 36-month realized vol (`slide_baseline_realized`) matches slide-21 turnover (13.42) exactly and
+is reported alongside. The choice of the literal version as the official baseline was made after both versions'
+OOS results had been seen. Slide 30 uses daily data
 (21-business-day returns) and ends Jun 2025; we use monthly returns through May 2025, so OOS levels are
 not expected to match exactly.
 
@@ -708,8 +710,8 @@ not expected to match exactly.
 - `continuous_signal` (Lecture 11 slide 24) was added as a candidate after the OOS results of the other
   components had been seen, prompted by the gap to the Lecture 11 baseline. Its specification
   (clip(12-month return / annual EWMA vol, -1, 1), one variant, no grid) was fixed before it was run.
-- Three baselines are reported: `slide_baseline` (official, Lecture 11 replica), `slide_baseline_exante`
-  (literal 11% ex-ante reading) and `baseline` (Lecture 6 course baseline from the midterm: expanding vol,
+- Three baselines are reported: `slide_baseline` (official, literal Lecture 11 slide 21: 11% ex-ante
+  target), `slide_baseline_realized` (alternative replica: 10% on 36-month realized vol) and `baseline` (Lecture 6 course baseline from the midterm: expanding vol,
   40%/vol, 1/N, no portfolio target).
 - Rebalance frequency was not a candidate: weekly/daily trading needs daily closes after 2014, which are
   not available here, so it cannot be tested out of sample.

@@ -6,24 +6,26 @@ slides 17-19, exact turnover formula) unless stated; Lecture 8 model, $1bn is in
 
 ## Baseline alignment (Lecture 11 slides 21 and 30)
 
-`Baseline` = Lecture 11 replica: binary 12-month signal, 1/(12-month vol)/N with no floor, 10% target on
-the trailing 36-month realized strategy vol, no leverage cap, monthly rebalance. A literal 11% ex-ante target on
-our monthly EWMA-covariance forecast (`slide_baseline_exante`) was also tried: IS vol 12.5%, turnover 21.8,
-leverage 5.75, i.e. further from slide 21 than this replica, which matches slide-21 turnover (13.42) exactly.
-The replica was chosen on that IS match, after both versions' OOS results had been seen. Slide 30 uses daily data
+`Baseline` = Lecture 11 slide 21 taken literally: binary 12-month signal, 1/(12-month vol)/N with no floor,
+whole book scaled each month to an **11% ex-ante** volatility target using the 6-month-half-life EWMA
+covariance forecast, no leverage cap, monthly rebalance. On monthly data the forecast runs hot: realized IS vol
+is about 12.5% rather than 11%, and turnover and leverage are above slide 21. An alternative replica that scales
+to 10% on trailing 36-month realized vol (`slide_baseline_realized`) matches slide-21 turnover (13.42) exactly and
+is reported alongside. The choice of the literal version as the official baseline was made after both versions'
+OOS results had been seen. Slide 30 uses daily data
 (21-business-day returns) and ends Jun 2025; we use monthly returns through May 2025, so OOS levels are
 not expected to match exactly.
 
 | | Slide 21 IS | Baseline IS | Final IS | Slide 30 OOS | Baseline OOS | Final OOS |
 |---|---:|---:|---:|---:|---:|---:|
-| Avg net return | 11.1% | 12.1% | 11.4% | 3.0% | 0.8% | 0.9% |
-| Std | 9.9% | 10.2% | 10.1% | 9.5% | 10.6% | 7.5% |
-| Sharpe | 1.13 | 1.18 | 1.13 | 0.31 | 0.08 | 0.12 |
-| Turnover | 13.42 | 13.42 | 10.84 | 30.46 | 28.55 | 15.30 |
-| T-costs | 0.59% | 0.63% | 0.45% | — | 1.30% | 0.60% |
-| Leverage | 4.00 | 4.55 | 2.92 | 7.94 | 9.17 | 3.69 |
+| Avg net return | 11.1% | 15.4% | 11.4% | 3.0% | 0.5% | 0.9% |
+| Std | 9.9% | 12.5% | 10.1% | 9.5% | 12.6% | 7.5% |
+| Sharpe | 1.13 | 1.23 | 1.13 | 0.31 | 0.04 | 0.12 |
+| Turnover | 13.42 | 21.80 | 10.84 | 30.46 | 43.70 | 15.30 |
+| T-costs | 0.59% | 0.90% | 0.45% | — | 1.75% | 0.60% |
+| Leverage | 4.00 | 5.75 | 2.92 | 7.94 | 10.97 | 3.69 |
 | #Names | 39.5 | 41.9 | 39.6 | 56.3 | 56.1 | 56.1 |
-| Imbalance | 1.30 | 1.49 | 0.93 | 2.70 | 3.98 | 0.88 |
+| Imbalance | 1.30 | 2.03 | 0.93 | 2.70 | 4.30 | 0.88 |
 
 ![S&P 500 smile](sp500_smile.png)
 
@@ -45,8 +47,8 @@ not expected to match exactly.
 - `continuous_signal` (Lecture 11 slide 24) was added as a candidate after the OOS results of the other
   components had been seen, prompted by the gap to the Lecture 11 baseline. Its specification
   (clip(12-month return / annual EWMA vol, -1, 1), one variant, no grid) was fixed before it was run.
-- Three baselines are reported: `slide_baseline` (official, Lecture 11 replica), `slide_baseline_exante`
-  (literal 11% ex-ante reading) and `baseline` (Lecture 6 course baseline from the midterm: expanding vol,
+- Three baselines are reported: `slide_baseline` (official, literal Lecture 11 slide 21: 11% ex-ante
+  target), `slide_baseline_realized` (alternative replica: 10% on 36-month realized vol) and `baseline` (Lecture 6 course baseline from the midterm: expanding vol,
   40%/vol, 1/N, no portfolio target).
 - Rebalance frequency was not a candidate: weekly/daily trading needs daily closes after 2014, which are
   not available here, so it cannot be tested out of sample.
@@ -89,8 +91,8 @@ net long; names = average number of positions.
 | Strategy | IS Net CAGR | OOS Net CAGR | IS Gross ret | OOS Gross ret | IS Net ret | OOS Net ret | IS Vol | OOS Vol | IS Sharpe | OOS Sharpe | IS Max DD | OOS Max DD | IS Turnover | OOS Turnover | IS Cost drag | OOS Cost drag | IS Leverage | OOS Leverage | IS Imbalance | OOS Imbalance | IS Names | OOS Names |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | baseline | 10.19% | -1.46% | 10.77% | -0.26% | 10.36% | -0.86% | 11.14% | 11.08% | 0.93 | -0.08 | -26.2% | -32.6% | 7.9 | 12.5 | 0.41% | 0.60% | 3.13 | 4.35 | +0.84 | +0.66 | 39.6 | 56.1 |
-| slide_baseline | 12.25% | 0.26% | 12.76% | 2.12% | 12.13% | 0.81% | 10.25% | 10.62% | 1.18 | 0.08 | -13.0% | -22.5% | 13.4 | 28.6 | 0.63% | 1.30% | 4.55 | 9.17 | +1.49 | +3.98 | 41.9 | 56.1 |
-| slide_baseline_exante | 15.68% | -0.26% | 16.32% | 2.28% | 15.43% | 0.53% | 12.51% | 12.64% | 1.23 | 0.04 | -16.0% | -24.6% | 21.8 | 43.7 | 0.90% | 1.75% | 5.75 | 10.97 | +2.03 | +4.30 | 41.9 | 56.1 |
+| slide_baseline | 15.68% | -0.26% | 16.32% | 2.28% | 15.43% | 0.53% | 12.51% | 12.64% | 1.23 | 0.04 | -16.0% | -24.6% | 21.8 | 43.7 | 0.90% | 1.75% | 5.75 | 10.97 | +2.03 | +4.30 | 41.9 | 56.1 |
+| slide_baseline_realized | 12.25% | 0.26% | 12.76% | 2.12% | 12.13% | 0.81% | 10.25% | 10.62% | 1.18 | 0.08 | -13.0% | -22.5% | 13.4 | 28.6 | 0.63% | 1.30% | 4.55 | 9.17 | +1.49 | +3.98 | 41.9 | 56.1 |
 | enhanced | 10.09% | -0.29% | 10.53% | 0.52% | 10.09% | -0.05% | 9.45% | 7.06% | 1.07 | -0.01 | -13.9% | -14.4% | 9.6 | 12.8 | 0.44% | 0.56% | 3.13 | 3.86 | +0.83 | +0.82 | 39.6 | 56.1 |
 | risk_budget | 9.58% | -0.10% | 10.54% | 1.04% | 9.73% | 0.04% | 10.55% | 5.35% | 0.92 | 0.01 | -12.2% | -13.8% | 25.6 | 33.8 | 0.81% | 1.00% | 3.67 | 4.00 | +0.83 | +0.76 | 39.6 | 56.1 |
 | economic_trend | 10.56% | -0.15% | 11.03% | 0.71% | 10.56% | 0.12% | 9.79% | 7.31% | 1.08 | 0.02 | -13.5% | -16.3% | 11.3 | 14.5 | 0.47% | 0.59% | 3.09 | 3.80 | +0.73 | +0.43 | 39.6 | 56.1 |
@@ -133,7 +135,7 @@ traded year (1990) and candidate pools were fixed before any walk-forward result
 
 | Strategy | 1990-2014 Net CAGR | OOS Net CAGR | 1990-2014 Gross ret | OOS Gross ret | 1990-2014 Net ret | OOS Net ret | 1990-2014 Vol | OOS Vol | 1990-2014 Sharpe | OOS Sharpe | 1990-2014 Max DD | OOS Max DD | 1990-2014 Turnover | OOS Turnover | 1990-2014 Cost drag | OOS Cost drag | 1990-2014 Leverage | OOS Leverage | 1990-2014 Imbalance | OOS Imbalance | 1990-2014 Names | OOS Names |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| slide_baseline | 12.37% | 0.26% | 13.08% | 2.12% | 12.26% | 0.81% | 10.39% | 10.62% | 1.18 | 0.08 | -10.3% | -22.5% | 17.1 | 28.6 | 0.82% | 1.30% | 6.03 | 9.17 | +2.30 | +3.98 | 51.0 | 56.1 |
+| slide_baseline | 15.69% | -0.26% | 16.56% | 2.28% | 15.40% | 0.53% | 12.24% | 12.64% | 1.26 | 0.04 | -13.0% | -24.6% | 27.9 | 43.7 | 1.16% | 1.75% | 7.56 | 10.97 | +3.11 | +4.30 | 51.0 | 56.1 |
 | baseline | 9.56% | -1.46% | 10.25% | -0.26% | 9.77% | -0.86% | 10.98% | 11.08% | 0.89 | -0.08 | -26.2% | -32.6% | 9.1 | 12.5 | 0.49% | 0.60% | 3.82 | 4.35 | +1.27 | +0.66 | 49.0 | 56.1 |
 | enhanced | 9.08% | -0.29% | 9.56% | 0.52% | 9.06% | -0.05% | 8.18% | 7.06% | 1.11 | -0.01 | -9.4% | -14.4% | 10.2 | 12.8 | 0.51% | 0.56% | 3.77 | 3.86 | +1.26 | +0.82 | 49.0 | 56.1 |
 | final | 10.55% | 0.65% | 11.02% | 1.53% | 10.48% | 0.93% | 9.06% | 7.46% | 1.16 | 0.12 | -11.5% | -11.9% | 12.8 | 15.3 | 0.55% | 0.60% | 3.64 | 3.69 | +1.39 | +0.88 | 49.0 | 56.1 |
