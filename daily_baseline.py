@@ -18,7 +18,7 @@ Specification (fixed before any result was computed):
 - Costs as combined_strategy.Pipeline.evaluate: roll = sum|w| x 2bp x 4/12 per period; grown = w x (1 + r - roll);
   turnover = sum|w - grown|; cost = 2bp x turnover + roll. 12 periods a year (252 / 21).
 
-    python daily_baseline.py            # needs ../FuturesUnderlyingData_FullSample (or DAILY_FULL_DIR)
+    python daily_baseline.py            # reads the files in data/
 """
 
 import os
@@ -27,11 +27,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from risk_budgeting import read_full_sample_returns
+from data_utils import monthly_returns, daily_returns as load_daily_returns
 
 ROOT = Path(__file__).resolve().parent
-DAILY_DIR = Path(os.environ.get("DAILY_FULL_DIR", ROOT.parent / "FuturesUnderlyingData_FullSample"))
-OUT = ROOT / "outputs" / "daily_baseline_output"
+DAILY_DIR = ROOT / "data" / "FuturesUnderlyingData_FullSample.zip"
+OUT = ROOT / "outputs" / "baseline"
 STEP, YEAR, MIN_OBS, HALFLIFE = 21, 252, 200, 126
 PER_YEAR = YEAR / STEP
 C = 2.0 / 1e4
@@ -49,6 +49,8 @@ SLIDES = {"IS 1976-2014": dict(annual_net_return=0.111, annual_volatility=0.099,
 
 def read_daily_returns(ids):
     """Daily close-to-close returns on the union calendar (NaN where a market does not trade)."""
+    if DAILY_DIR.suffix == ".zip":
+        return load_daily_returns(ids)
     out = {}
     for i in ids:
         path = DAILY_DIR / f"{i}_RAD.CSV"
@@ -59,6 +61,10 @@ def read_daily_returns(ids):
         close = d.set_index("date")["close"]
         out[i] = close[close > 0].pct_change().iloc[1:]
     return pd.DataFrame(out).sort_index()
+
+
+def read_full_sample_returns():
+    return monthly_returns()
 
 
 def rebalance_dates(index, anchor_date=ANCHOR):
@@ -158,7 +164,7 @@ def build(daily, anchor_date=ANCHOR):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     ids58 = list(read_full_sample_returns().columns)
-    ids66 = ids58 + sorted(set(pd.read_csv(ROOT / "AssetMapCsv.csv").ID) - set(ids58))
+    ids66 = ids58 + sorted(set(pd.read_csv(ROOT / "data" / "AssetMapCsv.csv").ID) - set(ids58))
     results, daily = {}, {}
     for tag, ids in (("58", ids58), ("66", ids66)):
         daily[tag] = read_daily_returns(ids)

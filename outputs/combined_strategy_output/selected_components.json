@@ -1,8 +1,0 @@
-{
-  "selected": [
-    "continuous_signal"
-  ],
-  "threshold": 0.05,
-  "criterion": "IS (1976-01..2014-12) net Sharpe, Lecture 11: 2 bps + 4 rolls/yr",
-  "selection_data_end": "2014-12-31"
-}

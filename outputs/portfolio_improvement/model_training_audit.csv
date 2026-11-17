@@ -1,5 +1,0 @@
-model,phase,features,training_rows,last_training_label,first_formation
-Logistic,development,66,13191,2004-11-30 00:00:00,2004-12-31 00:00:00
-Logistic,post2014,66,20059,2014-11-28 00:00:00,2014-12-31 00:00:00
-HistGB,development,66,13191,2004-11-30 00:00:00,2004-12-31 00:00:00
-HistGB,post2014,66,20059,2014-11-28 00:00:00,2014-12-31 00:00:00
