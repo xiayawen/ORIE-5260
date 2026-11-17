@@ -2,22 +2,6 @@
 
 English version: [PORTFOLIO_OPTIMIZATION_REPORT_EN.md](PORTFOLIO_OPTIMIZATION_REPORT_EN.md)
 
-## 协作者代码贡献
-
-正式组合把多位协作者提交的策略模块和共同组合基础设施结合起来。下表中的“贡献者”依据当前实现所使用代码的Git提交作者，不表示对相关学术思想的所有权。
-
-| 组合部分 | 在正式组合中的作用 | 代码贡献者 | 主要实现 |
-| --- | --- | --- | --- |
-| 连续价格趋势sleeve | 30%收益sleeve | **Minxi-Lin**提交连续信号；**Betty Lyu**提交底层波动率/风险权重工具 | `combined_strategy.py`、`strategy_backtest_adj.py`、`economic_trend.py` |
-| 经济趋势sleeve | 使用五个宏观主题的20%收益sleeve | **Betty Lyu** | `economic_trend.py` |
-| 负偏度因子sleeve | 使用资产类别内`NegativeSkew_12m`排序的20%收益sleeve | **xiayawen** | `futures_factor_backtest.py` |
-| Extra Trees 66 sleeve | 30%机器学习收益sleeve | **xiayawen** | `sign_return_prediction.py`、`fixed_2015_holdout.py`、`combined_factor_models.py` |
-| EWMA协方差风险模型 | 四个sleeve共同的风险归一化和组合约束 | **JodieeT** | `covariance_risk_validation.py` |
-| 组合策略框架 | 合并和测试团队模块的初始共同pipeline | **Minxi-Lin** | `combined_strategy.py` |
-| 最终固定配重、验证和成本执行 | 选择固定30/20/20/30 Extra Trees 66组合并实现当前执行比较 | **xiayawen** | `optimize_combined_portfolio.py`、`unified_portfolio.py` |
-
-因此四个收益sleeve并不是四个完全独立的端到端提交。它们共同使用JodieeT的协方差风险引擎以及最终整合和执行层。第9节slow-fast/turning-point扩展只修改趋势sleeve，并保留这些共同基础设施。
-
 运行：`OMP_NUM_THREADS=2 MPLCONFIGDIR=/private/tmp/orie-mpl python3 optimize_combined_portfolio.py`。
 测试：`python3 -m unittest test_unified_portfolio -v`。
 已保存选择后，可用 `--reuse-frozen-selection` 重建诊断结果，不重新选择参数。
@@ -292,3 +276,20 @@ Slow-fast/turning-point版本可以作为正式四sleeve的**风险降低变体*
 - `outputs/portfolio_optimization/dynamic_speed_comparison.csv`：分期表现与风险。
 - `outputs/portfolio_optimization/dynamic_speed_incremental_hac.csv`：增量收益HAC推断。
 - `outputs/portfolio_optimization/optimization_comparison.png`：2015–2025累计表现和回撤图。
+
+## 协作者代码贡献
+
+正式组合把多位协作者提交的策略模块和共同组合基础设施结合起来。下表中的“贡献者”依据当前实现所使用代码的Git提交作者，不表示对相关学术思想的所有权。
+
+| 组合部分 | 在正式组合中的作用 | 代码贡献者 | 主要实现 |
+| --- | --- | --- | --- |
+| 连续价格趋势sleeve | 30%收益sleeve | **Minxi-Lin**提交连续信号；**Betty Lyu**提交底层波动率/风险权重工具 | `combined_strategy.py`、`strategy_backtest_adj.py`、`economic_trend.py` |
+| 经济趋势sleeve | 使用五个宏观主题的20%收益sleeve | **Betty Lyu** | `economic_trend.py` |
+| 负偏度因子sleeve | 使用资产类别内`NegativeSkew_12m`排序的20%收益sleeve | **xiayawen** | `futures_factor_backtest.py` |
+| Extra Trees 66 sleeve | 30%机器学习收益sleeve | **xiayawen** | `sign_return_prediction.py`、`fixed_2015_holdout.py`、`combined_factor_models.py` |
+| EWMA协方差风险模型 | 四个sleeve共同的风险归一化和组合约束 | **JodieeT** | `covariance_risk_validation.py` |
+| 组合策略框架 | 合并和测试团队模块的初始共同pipeline | **Minxi-Lin** | `combined_strategy.py` |
+| 最终固定配重、验证和成本执行 | 选择固定30/20/20/30 Extra Trees 66组合并实现当前执行比较 | **xiayawen** | `optimize_combined_portfolio.py`、`unified_portfolio.py` |
+| Slow-fast/turning-point扩展 | 用状态依赖的slow-fast混合替换趋势sleeve，并与正式组合比较的风险降低版本 | **carlyhcy** | `turning_point_model/dynamic_speed.py`、`turning_point_model/tests/test_dynamic_speed.py`、`optimize_combined_portfolio.py`中的slow-fast整合 |
+
+四个收益sleeve并不是四个完全独立的端到端提交。它们共同使用JodieeT的协方差风险引擎以及最终整合和执行层。carlyhcy贡献的slow-fast/turning-point模型是该组合的扩展，不是第五个收益sleeve。

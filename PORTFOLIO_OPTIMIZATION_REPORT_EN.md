@@ -2,22 +2,6 @@
 
 Chinese version: [PORTFOLIO_OPTIMIZATION_REPORT.md](PORTFOLIO_OPTIMIZATION_REPORT.md)
 
-## Collaborator contribution map
-
-The selected portfolio combines strategy modules and shared portfolio infrastructure submitted by several collaborators. “Contributor” below refers to Git commit authorship for the code used by the current implementation; it does not assign ownership of the underlying academic ideas.
-
-| Portfolio component | Role in the selected portfolio | Code contributor(s) | Main implementation |
-| --- | --- | --- | --- |
-| Continuous price-trend sleeve | 30% return sleeve | **Minxi-Lin** for the continuous signal; **Betty Lyu** for the underlying volatility/risk-weighting utilities | `combined_strategy.py`, `strategy_backtest_adj.py`, `economic_trend.py` |
-| Economic-trend sleeve | 20% return sleeve using five macro themes | **Betty Lyu** | `economic_trend.py` |
-| Negative-skew factor sleeve | 20% return sleeve using within-asset-class `NegativeSkew_12m` ranks | **xiayawen** | `futures_factor_backtest.py` |
-| Extra Trees 66 sleeve | 30% ML return sleeve | **xiayawen** | `sign_return_prediction.py`, `fixed_2015_holdout.py`, `combined_factor_models.py` |
-| EWMA covariance risk model | Shared risk normalization and portfolio constraints for all four sleeves | **JodieeT** | `covariance_risk_validation.py` |
-| Combined-strategy framework | Original common pipeline for combining and testing team modules | **Minxi-Lin** | `combined_strategy.py` |
-| Final fixed allocation, validation and cost-aware execution | Selects the fixed 30/20/20/30 Extra Trees 66 portfolio and implements the current execution comparison | **xiayawen** | `optimize_combined_portfolio.py`, `unified_portfolio.py` |
-
-The four return sleeves are therefore not four entirely separate end-to-end submissions. They share JodieeT's covariance risk engine and the final integration and execution layer. The slow-fast/turning-point extension in Section 9 modifies only the trend sleeve and retains this common infrastructure.
-
 Run: `OMP_NUM_THREADS=2 MPLCONFIGDIR=/private/tmp/orie-mpl python3 optimize_combined_portfolio.py`.
 
 Test: `python3 -m unittest test_unified_portfolio -v`.
@@ -252,3 +236,20 @@ Implementation and outputs:
 - `outputs/portfolio_optimization/dynamic_speed_comparison.csv`: Period-level performance and risk.
 - `outputs/portfolio_optimization/dynamic_speed_incremental_hac.csv`: HAC inference for incremental returns.
 - `outputs/portfolio_optimization/optimization_comparison.png`: 2015-2025 cumulative-performance and drawdown figure.
+
+## Collaborator contribution map
+
+The selected portfolio combines strategy modules and shared portfolio infrastructure submitted by several collaborators. “Contributor” below refers to Git commit authorship for the code used by the current implementation; it does not assign ownership of the underlying academic ideas.
+
+| Portfolio component | Role in the selected portfolio | Code contributor(s) | Main implementation |
+| --- | --- | --- | --- |
+| Continuous price-trend sleeve | 30% return sleeve | **Minxi-Lin** for the continuous signal; **Betty Lyu** for the underlying volatility/risk-weighting utilities | `combined_strategy.py`, `strategy_backtest_adj.py`, `economic_trend.py` |
+| Economic-trend sleeve | 20% return sleeve using five macro themes | **Betty Lyu** | `economic_trend.py` |
+| Negative-skew factor sleeve | 20% return sleeve using within-asset-class `NegativeSkew_12m` ranks | **xiayawen** | `futures_factor_backtest.py` |
+| Extra Trees 66 sleeve | 30% ML return sleeve | **xiayawen** | `sign_return_prediction.py`, `fixed_2015_holdout.py`, `combined_factor_models.py` |
+| EWMA covariance risk model | Shared risk normalization and portfolio constraints for all four sleeves | **JodieeT** | `covariance_risk_validation.py` |
+| Combined-strategy framework | Original common pipeline for combining and testing team modules | **Minxi-Lin** | `combined_strategy.py` |
+| Final fixed allocation, validation and cost-aware execution | Selects the fixed 30/20/20/30 Extra Trees 66 portfolio and implements the current execution comparison | **xiayawen** | `optimize_combined_portfolio.py`, `unified_portfolio.py` |
+| Slow-fast/turning-point extension | Risk-reducing variant that replaces the trend sleeve with a state-dependent slow-fast blend and evaluates it against the selected portfolio | **carlyhcy** | `turning_point_model/dynamic_speed.py`, `turning_point_model/tests/test_dynamic_speed.py`, and the slow-fast integration in `optimize_combined_portfolio.py` |
+
+The four return sleeves are not four entirely separate end-to-end submissions. They share JodieeT's covariance risk engine and the final integration and execution layer. The slow-fast/turning-point model contributed by carlyhcy is an extension of the portfolio, not a fifth return sleeve.
