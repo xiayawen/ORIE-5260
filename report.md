@@ -14,22 +14,63 @@ The historical assessment is 1976–2014. Within it, 2005–2009 was used to ass
 
 ## 2. Benchmark: course daily time-series momentum
 
-The benchmark is Minxi-Lin's daily implementation of the Lecture 11 baseline, introduced in [commit 5838b70](https://github.com/xiayawen/ORIE-5260/commit/5838b706cf5b71a1926424fd4751fec679e9af94). At each 21-day formation close it takes the sign of each market's trailing 252-day compounded return, scales by that market's trailing 252-day annualized standard deviation, and divides across eligible markets. The full book is scaled to 11% ex-ante annual volatility using a trailing 252-day sample covariance matrix. An instrument needs at least 200 valid daily observations. The benchmark has no gross, net or asset-class exposure caps. The primary comparison uses its 58-market sample-covariance version; the 66-market and alternative covariance/realized-volatility versions remain in the baseline outputs as robustness checks.
+The course daily baseline takes the sign of each market's trailing 252-day compounded return at each 21-day formation close, scales by that market's trailing 252-day annualized standard deviation, and divides across eligible markets. The full book is scaled to 11% ex-ante annual volatility using a trailing 252-day sample covariance matrix. An instrument needs at least 200 valid daily observations. The benchmark has no gross, net or asset-class exposure caps. The primary comparison uses its 58-market sample-covariance version; the 66-market and alternative covariance/realized-volatility versions remain in the baseline outputs as robustness checks.
 
-## 3. Enhanced strategy construction
+## 3. Enhancement objectives and design
 
-Each sleeve first maps dated observations into instrument weights and is brought to a comparable predicted risk scale. The final signal budgets are fixed at 30/20/20/30; they do not imply equal realized risk contributions.
+The baseline provides one directional view of each market: the sign of its trailing price trend. Our design asks whether three additional sources of information improve the *portfolio's* risk-adjusted performance when all positions share the same risk and execution rules. The four sleeves receive fixed **signal budgets**, chosen before the later evaluation: 30% daily price trend, 20% economic trend, 20% negative skew and 30% Extra Trees. These percentages specify how the proposed weights are combined; they are not equal-risk allocations or estimated return contributions.
 
-| Sleeve | Signal and interpretation | Budget |
-|---|---|---:|
-| Daily price trend | Same 252-day direction and instrument-risk estimate as the benchmark; measured at each 21-day decision close. | 30% |
-| Economic trend | Growth, inflation, trade, monetary policy and risk aversion map into futures directions; publication lags are applied to INDPRO and CPI. | 20% |
-| Negative skew | A 12-month skewness score ranks instruments within each asset class; positions are centered within class. | 20% |
-| Extra Trees | A 66-feature model forecasts next-month return direction using trailing price-path and peer-market information. | 30% |
+### 3.1 Daily price trend: preserve the benchmark's core idea
 
-The macro, skew and model forecasts are calculated at month-end and carried to the next 21-day formation using the latest available values. When a sleeve is unavailable, its budget is assigned to price trend. The Extra Trees model has 200 trees, depth 6, minimum leaf size 30, `max_features=0.7` and seed 5260. The initial fit uses only labels known before 2005; a single later refit uses labels known before 2015. Its feature construction and training audit are included in the submission.
+**Objective.** Retain direct exposure to persistent trends so that the enhancement remains anchored to the course's time-series momentum hypothesis. Daily observations also let the position reflect the latest available price at each decision close.
 
-At each formation date, the common risk model estimates annual covariance from the previous 252 daily returns and repairs negative eigenvalues caused by incomplete observations. The final book is scaled down where necessary to satisfy a 10% predicted portfolio-volatility ceiling, 4× gross-exposure ceiling, ±1× net-exposure ceiling and 5% standalone predicted volatility ceiling for each asset class. A cost-aware rule with γ=5 moves from drifted holdings toward the target along a feasible path. Transactions cost 2 basis points per unit of turnover, and four annual contract rolls are charged at 2 basis points. These are the costs used for the results below; they are a simplified futures implementation model, not a measured bid-ask or market-impact estimate.
+**Design.** For each eligible future, we take the sign of its compounded return over the previous 252 trading days and divide that direction by its trailing 252-day annualized return volatility. At least 200 valid daily observations are required, and the market must have traded within the most recent five days. The resulting inverse-volatility weights are averaged across eligible markets and brought to a common predicted risk scale. This sleeve uses the baseline's *directional signal*, although its final portfolio weight is subject to the shared controls below.
+
+### 3.2 Economic trend: add information about the market environment
+
+**Objective.** Test whether broad economic conditions provide a useful directional view beyond an instrument's own price history. This is intended to diversify the sources of signals, not to replace the observed price trend.
+
+**Design.** Five predefined themes are translated into long or short directions for equity, fixed-income, currency and commodity futures:
+
+| Theme | Dated input used to form the theme |
+|---|---|
+| Growth | Change in 12-month industrial-production growth. |
+| Inflation | Change in 12-month CPI inflation. |
+| Trade | Average trailing 12-month return of the eligible currency futures. |
+| Monetary policy | 12-month change in the US two-year Treasury yield. |
+| Risk environment | Equity-futures trend combined with the opposite of the 12-month change in the Baa–Treasury credit spread. |
+
+Industrial production and CPI are delayed one additional month in the implementation. Theme directions are smoothed over three months, mapped to asset classes using fixed signs, and adjusted for the currency quote convention. Each available theme first forms inverse-volatility positions and is scaled to comparable predicted risk; the five theme portfolios are then averaged and scaled again. The mapping is a predetermined economic hypothesis rather than a set of weights fitted to the later returns. `macro_trend.py` contains the exact sign table and instrument eligibility rules.
+
+### 3.3 Negative skew: compare markets with their asset-class peers
+
+**Objective.** Examine whether the shape of recent returns contains cross-sectional information that a trend signal misses. This sleeve tests whether markets with more negative trailing skewness have a different subsequent payoff from peers in the same asset class; the premise is a hypothesis, not an assumed result.
+
+**Design.** At each month-end, we calculate skewness from the latest 12 monthly returns and rank *negative* skewness within each asset class. Ranks are centered within the class, producing long weights for relatively more negatively skewed markets and short weights for relatively less negatively skewed markets. A class needs at least four eligible markets for a signal. The scores are divided by instrument volatility, averaged across available positions and normalized to the common predicted risk scale. Centering aims to emphasize within-class selection rather than a broad long or short asset-class bet.
+
+### 3.4 Extra Trees: allow nonlinear combinations of return information
+
+**Objective.** Test whether relationships among momentum, reversal, volatility, tail behavior and peer-market returns contain predictive information that fixed single-factor rules do not capture.
+
+**Design.** An Extra Trees classifier estimates each instrument's probability of a *positive next-month return*. Its 66 inputs consist of 31 trailing price-path and peer-market measures, 31 corresponding within-class ranks and four asset-class indicators. The predicted probability is converted to a continuous direction, `2 × probability − 1`, then divided by instrument volatility and normalized to the common risk scale. A forecast near 50% therefore produces a small proposed position rather than a forced full long or short.
+
+The model uses 200 trees, maximum depth 6, minimum leaf size 30, `max_features=0.7` and seed 5260. It is first fitted using labels known before 2005, then refitted once using labels known before 2015; each fit is held fixed during its subsequent evaluation block. Its training dates and sample sizes are saved in `outputs/final_strategy/extra_trees_training_audit.csv`. There is no active out-of-training Extra Trees sleeve before 2005, so its budget goes to price trend in those years.
+
+### 3.5 Combining the sleeves and controlling risk
+
+**Objective.** Turn four potentially conflicting signals into one portfolio while limiting portfolio-wide volatility and concentration. The risk controls are part of the proposed enhancement and can themselves affect the comparison with the baseline.
+
+**Design.** The three non-price sleeves are calculated at month-end and carried to each subsequent 21-business-day formation using the most recent available value. A missing sleeve's budget goes to daily price trend. Each active sleeve is first normalized to a comparable *predicted* volatility using information available at formation. The proposed portfolio is the fixed 30/20/20/30 weighted sum of these sleeve weights.
+
+At each formation close, the portfolio risk model estimates an annualized covariance matrix from the preceding 252 daily returns. It repairs negative eigenvalues that can arise with incomplete observations. The proposed weights are scaled down if necessary to meet all four limits simultaneously: at most 10% predicted portfolio volatility, 4× gross exposure, 1× absolute net exposure and 5% standalone predicted volatility for each asset class. These are ceilings, so realized volatility may be well below 10%. The common limits are implemented in `risk_model.py` and `portfolio_engine.py`.
+
+### 3.6 Execution and transaction costs
+
+**Objective.** Avoid assuming that every change in target weights can be implemented without cost. The execution rule asks whether moving closer to the target is worth the additional trading implied by that move.
+
+**Design.** At a formation close, the strategy first repairs any drifted holdings that breach the limits, then chooses how far to move along the feasible path toward the new target. A fixed tracking-error penalty, γ=5, trades off target deviation against expected turnover and roll costs. The assumed cost is **2 basis points per unit of traded notional**, plus an allowance for **four annual rolls at 2 basis points each** on held gross notional. Trades formed at a close begin earning returns on the next trading day; returns and costs are marked daily. This simplified convention does not estimate bid-ask variation or market impact.
+
+The results below measure the *combined* effect of the added signals, shared risk limits and execution design. They do not identify a separate causal contribution from each component.
 
 ## 4. Matched-period results
 
@@ -45,6 +86,14 @@ The following statistics use **the same 21-business-day period endpoints and the
 ![Matched course baseline and final portfolio wealth paths](outputs/comparison/baseline_vs_four_sleeve.png)
 
 The historical benchmark earned substantially more return and a higher Sharpe. During the later interval, the four-sleeve portfolio improved Sharpe by 0.258 and reduced annual volatility by 9.25 percentage points, while giving up 1.19 percentage points of arithmetic annual net return. Thus the evidence supports greater risk efficiency and smaller realized swings, rather than a universal return improvement.
+
+### Drawdown from prior wealth peaks
+
+Drawdown is the percentage decline from the highest wealth reached earlier in the same evaluation interval, starting from $1. The following curves use the **same 21-day period endpoints** as the table above; each interval starts a new wealth path.
+
+![Matched course baseline and four-sleeve drawdowns, in sample and later period](outputs/comparison/drawdown_comparison.png)
+
+In sample, maximum endpoint drawdown falls from **18.24%** for the baseline to **12.10%** for the enhancement. In the later period it falls from **25.48%** to **5.45%**, a 20.03-percentage-point reduction. The chart shows how long and how deeply each strategy stayed below its previous peak, rather than only the single worst observation. This is a portfolio risk result; the lower volatility target and exposure caps also contribute, so it should not be attributed to the added signals alone.
 
 Daily marking makes the final portfolio's later-period volatility **3.92%**, Sharpe **0.522** and maximum *daily* drawdown **−7.41%**. The endpoint drawdown above is less severe because it omits losses between 21-day reporting dates. The baseline implementation presently saves returns at 21-day endpoints, so a directly comparable maximum daily drawdown for the baseline is unavailable.
 

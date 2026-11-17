@@ -5,11 +5,20 @@ import numpy as np
 import pandas as pd
 
 from costs_and_execution import mark_daily
+from daily_baseline import construct_signal
 from portfolio_engine import constrain
 from risk_model import LIMITS
 
 
 class FinalStrategyTests(unittest.TestCase):
+    def test_baseline_signal_uses_trailing_daily_returns(self):
+        dates = pd.bdate_range("2020-01-01", periods=253)
+        daily = pd.DataFrame({"A": [.001] * 252 + [-.40]}, index=dates)
+        signal, volatility = construct_signal(daily, dates[-2:])
+        self.assertEqual(signal.loc[dates[-2], "A"], 1)
+        self.assertEqual(signal.loc[dates[-1], "A"], -1)
+        self.assertGreater(volatility.loc[dates[-1], "A"], 0)
+
     def test_close_formation_starts_next_day(self):
         dates = pd.bdate_range("2020-01-01", periods=4)
         daily = pd.DataFrame({"A": [.05, .10, 0, 0]}, index=dates)

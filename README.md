@@ -18,7 +18,7 @@ All source data needed for these commands are in `data/`. They include the full-
 
 | File or folder | Purpose |
 |---|---|
-| `daily_baseline.py` | Minxi-Lin's Lecture 11 daily baseline from commit [`5838b70`](https://github.com/xiayawen/ORIE-5260/commit/5838b706cf5b71a1926424fd4751fec679e9af94). Only its input/output paths were adapted to this layout. |
+| `daily_baseline.py` | Minxi-Lin's Lecture 11 daily baseline from commit [`5838b70`](https://github.com/xiayawen/ORIE-5260/commit/5838b706cf5b71a1926424fd4751fec679e9af94), with local data paths and inspectable signal outputs. It constructs the 252-day direction, instrument volatility and portfolio weights directly from daily returns. |
 | `price_trend.py` | 252-day compounded-return direction and 252-day instrument volatility for the price-trend sleeve. |
 | `macro_trend.py` | Five economic themes mapped to futures positions with dated release assumptions. |
 | `negative_skew.py` | Within-asset-class ranking of trailing 12-month negative skewness. |
@@ -28,10 +28,10 @@ All source data needed for these commands are in `data/`. They include the full-
 | `costs_and_execution.py` | Actual trading and roll cost convention; daily mark-to-market after formation-close trading. |
 | `data_utils.py` | Source loading, common instrument list and 21-business-day calendar. |
 | `run_final_strategy.py` | Combines the four sleeves at fixed 30%/20%/20%/30% signal budgets and saves weights, returns and daily statistics. |
-| `compare_baseline.py` | Aligns both strategies on the same 21-day period endpoints and saves the report comparison. |
-| `outputs/baseline/` | Baseline series, summary and anchor-grid sensitivity. |
+| `compare_baseline.py` | Aligns both strategies on the same 21-day period endpoints and saves performance, wealth and drawdown comparisons. |
+| `outputs/baseline/` | Baseline signals, volatility estimates, raw and final formation weights, return series, summary and anchor-grid sensitivity. |
 | `outputs/final_strategy/` | Selected strategy's daily returns, weights, model-fitting audit and statistics. |
-| `outputs/comparison/` | Matched-period returns, IS/OOS table and comparison figure. |
+| `outputs/comparison/` | Matched-period returns, IS/OOS table, wealth figure and drawdown figure. |
 | `tests/` | Checks formation timing and portfolio constraints. |
 
 The final portfolio has an annual ex-ante volatility ceiling of 10%, gross exposure at most 4×, absolute net exposure at most 1×, and a 5% standalone volatility ceiling per asset class. It uses a 252-day sample covariance at each formation date. The selected cost convention is **2 basis points per unit traded plus four rolls per year at 2 basis points**; a fixed cost-aware execution parameter γ=5 moderates trading. The baseline uses an 11% ex-ante volatility target and does not impose the portfolio's exposure or asset-class limits. These differences are part of the enhancement and matter when interpreting returns.

@@ -21,7 +21,6 @@ Specification (fixed before any result was computed):
     python daily_baseline.py            # reads the files in data/
 """
 
-import os
 from pathlib import Path
 
 import numpy as np
@@ -72,14 +71,18 @@ def rebalance_dates(index, anchor_date=ANCHOR):
     return index[anchor % STEP::STEP]
 
 
-def formation_inputs(daily, dates):
-    """Signal and vol at each rebalance date, from the trailing 252 trading days of that market."""
-    filled = np.log1p(daily)
-    trailing_ret = filled.rolling(YEAR, min_periods=MIN_OBS).sum()
+def construct_signal(daily, dates):
+    """Build each market's +1/-1 trend signal and risk estimate from daily returns.
+
+    The sign of the sum of log(1 + r) is the sign of the compounded return.
+    Rolling windows end at the formation close; no subsequent return enters.
+    """
+    log_return = np.log1p(daily)
+    trailing_log_return = log_return.rolling(YEAR, min_periods=MIN_OBS).sum()
     vol = daily.rolling(YEAR, min_periods=MIN_OBS).std() * np.sqrt(YEAR)
-    # a market must still be trading: a print within the last 5 days
+    # A market must still be trading: at least one print within the last 5 days.
     live = daily.notna().rolling(5, min_periods=1).sum().gt(0)
-    signal = np.sign(trailing_ret).where(live)
+    signal = np.sign(trailing_log_return).where(live)
     return signal.loc[dates], vol.where(live).loc[dates]
 
 
@@ -145,9 +148,9 @@ def stats(s, start, end):
             "average_names": s.names.mean()}
 
 
-def build(daily, anchor_date=ANCHOR):
+def build(daily, anchor_date=ANCHOR, diagnostics_tag=None):
     dates = rebalance_dates(daily.index, anchor_date)
-    signal, vol = formation_inputs(daily, dates)
+    signal, vol = construct_signal(daily, dates)
     raw = raw_weights(signal, vol)
     r = period_returns(daily, dates)
     out = {}
@@ -158,6 +161,14 @@ def build(daily, anchor_date=ANCHOR):
     unscaled = (raw.shift(1).reindex(r.index).fillna(0.0) * r.fillna(0.0)).sum(axis=1)
     realized = unscaled.rolling(36, min_periods=36).std() * np.sqrt(PER_YEAR)
     out["realized_10_36p"] = raw.mul((TARGET_REALIZED / realized).reindex(raw.index), axis=0).fillna(0.0)
+    if diagnostics_tag is not None:
+        # Expose the full construction chain for the primary and robustness universes.
+        signal.to_csv(OUT / f"signal_u{diagnostics_tag}.csv", index_label="formation_date")
+        vol.to_csv(OUT / f"signal_volatility_u{diagnostics_tag}.csv", index_label="formation_date")
+        raw.to_csv(OUT / f"raw_inverse_vol_weights_u{diagnostics_tag}.csv", index_label="formation_date")
+        out["exante_11_sample"].to_csv(
+            OUT / f"formation_weights_exante_11_sample_u{diagnostics_tag}.csv",
+            index_label="formation_date")
     return {k: evaluate(w, r) for k, w in out.items()}, out
 
 
@@ -168,7 +179,7 @@ def main():
     results, daily = {}, {}
     for tag, ids in (("58", ids58), ("66", ids66)):
         daily[tag] = read_daily_returns(ids)
-        res, _ = build(daily[tag])
+        res, _ = build(daily[tag], diagnostics_tag=tag)
         results.update({f"{name}_u{tag}": s for name, s in res.items()})
     rows = []
     for name, s in results.items():
