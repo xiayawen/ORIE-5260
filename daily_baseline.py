@@ -1,7 +1,9 @@
-"""Lecture 11 baseline on daily data, rebalanced every 21 business days (slides 17-21 and 30).
+"""Lecture 11 baseline on daily data, rebalanced every 21 business days (slides 17-21, 29 and 30).
 
-Slide 21 / 30 baseline: binary 12-month signal, 12-month volatility scaling, 11% ex-ante volatility
+Slide 21 baseline: binary 12-month signal, 12-month volatility scaling, 11% ex-ante volatility
 target, 21-business-day holding periods, net of 2 bps per unit turnover + 4 rolls a year at 2 bps.
+Reference statistics: slide 29 (in-sample, 21-business-day returns) and slide 30 (out-of-sample,
+1/2015-6/2025). Slide 29 starts in 12/1973; our in-sample row starts in 1976.
 This script rebuilds it from the daily back-adjusted closes (`*_RAD.CSV`), which reproduce the
 monthly returns in MonthlyReturns_FullSample.xlsx exactly at month ends.
 
@@ -38,9 +40,10 @@ TARGET_EXANTE, TARGET_REALIZED = 0.11, 0.10
 ANCHOR = pd.Timestamp("2014-12-31")
 ANCHOR_OFFSETS = (0, 3, 6, 9, 12, 15, 18)
 PERIODS = {"IS 1976-2014": ("1976-01-01", "2014-12-31"), "OOS 2015-2025": ("2015-01-01", "2025-06-30")}
-SLIDES = {"IS 1976-2014": dict(annual_net_return=0.111, annual_volatility=0.099, net_sharpe=1.13,
-                               annual_turnover=13.42, annual_cost_drag=0.0059, average_gross_exposure=4.0,
-                               average_names=39.5, average_net_exposure=1.3),
+# Slide 29 (in-sample) and slide 30 (out-of-sample); neither slide reports T-costs.
+SLIDES = {"IS 1976-2014": dict(annual_net_return=0.132, annual_volatility=0.108, net_sharpe=1.22,
+                               annual_turnover=17.79, annual_cost_drag=np.nan, average_gross_exposure=4.62,
+                               average_names=41.4, average_net_exposure=1.5),
           "OOS 2015-2025": dict(annual_net_return=0.030, annual_volatility=0.095, net_sharpe=0.31,
                                 annual_turnover=30.46, annual_cost_drag=np.nan, average_gross_exposure=7.94,
                                 average_names=56.3, average_net_exposure=2.7)}
@@ -230,7 +233,9 @@ def main():
              f"but the OOS Sharpe of the primary version ranges from {grid[cols[4]].min():.2f} to "
              f"{grid[cols[4]].max():.2f} across grid starts (mean {grid[cols[4]].mean():.2f}), all below slide 30's "
              "0.31; offset 0 happens to be the highest.",
-             "- Leverage, volatility and turnover are 35-55% above slides 21/30 in both periods, so the scale of the "
+             "- In sample, the primary version's Sharpe matches slide 29 (1.22 vs 1.22); its volatility, turnover and "
+             "leverage are about 15-35% above slide 29.",
+             "- Out of sample, volatility, turnover and leverage are about 40-45% above slide 30, so the scale of the "
              "book (how much low-volatility rate futures it holds) still differs from the professor's.",
              "- The 66-market course asset map adds Fed funds futures (FF), whose tiny volatility pushes leverage to "
              "about 22x; the 58-market universe is the closer match.", ""]
