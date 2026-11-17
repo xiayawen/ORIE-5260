@@ -1,7 +1,10 @@
 """Run the selected daily-signal four-sleeve futures portfolio.
 
-Four fixed budgets: 30% price trend, 20% macro, 20% negative skew,
-30% frozen Extra Trees. Formation every 21 business days; daily NAV marking.
+Four fixed signal budgets: 30% price trend, 20% macro, 20% negative skew,
+30% frozen Extra Trees. The blended book is scaled to 10% ex-ante volatility
+(252-day daily covariance) with no exposure caps, and fully rebalanced every
+21 business days; NAV is marked daily. The capped and cost-aware variants are
+appendix diagnostics (decompose_steps.py, exposure_sensitivity.py).
 """
 import os
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/orie5260-matplotlib")
@@ -13,17 +16,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from costs_and_execution import execute, mark_daily
+from costs_and_execution import mark_daily
 from data_utils import ROOT, asset_map, daily_returns, monthly_returns, period_returns, rebalance_dates
 from extra_trees import extra_trees_sleeve
 from macro_trend import macro_sleeve, RATE_FUTURES_IN_FX
 from negative_skew import skew_sleeve
-from portfolio_engine import blended_target, risk_normalize
+from portfolio_engine import risk_normalize
 from price_trend import daily_signal_and_vol
 from risk_model import LIMITS, monthly_ewma_vol, monthly_covariance_cube, daily_covariance_cube
 
 OUT = ROOT / "outputs" / "final_strategy"
 BUDGETS = np.array([.3, .2, .2, .3])
+TARGET_VOLATILITY = LIMITS.volatility  # 10% ex-ante; used as a scaling target, not a ceiling
 EVALUATION = {"IS_1976_2014": ("1976-01-01", "2014-12-31"),
               "development_2005_2009": ("2005-01-01", "2009-12-31"),
               "validation_2010_2014": ("2010-01-01", "2014-12-31"),
@@ -70,6 +74,33 @@ def dated_sleeves(monthly, monthly_basis, dates, daily_core, covariance, eligibl
     return np.stack(pieces, axis=1)
 
 
+def build_portfolio_inputs():
+    """Everything the final strategy and the appendix variants share, dated causally."""
+    monthly = monthly_returns()
+    daily = daily_returns(list(monthly.columns))
+    dates = rebalance_dates(daily.index)
+    dates = dates[(dates >= pd.Timestamp("1975-01-01")) & (dates <= monthly.index.max())]
+    slow, vol = daily_signal_and_vol(daily, dates)
+    eligible_frame = slow.notna() & vol.notna() & slow.ne(0)
+    eligible = eligible_frame.to_numpy()
+    covariance = daily_covariance_cube(daily, dates, eligible_frame)
+    daily_core = risk_normalize(inverse_vol_weight(slow, vol).to_numpy() * eligible, covariance)
+    monthly_basis, classes, audit = build_monthly_sleeves(monthly)
+    basis = dated_sleeves(monthly, monthly_basis, dates, daily_core, covariance, eligible)
+    mapped = classes.copy()
+    mapped.loc[mapped.index.isin(RATE_FUTURES_IN_FX)] = "FI"
+    groups = [mapped.eq(c).to_numpy() for c in sorted(mapped.unique())]
+    forward = period_returns(daily, dates).reindex(columns=monthly.columns).reindex(dates).fillna(0).to_numpy()
+    return dict(monthly=monthly, daily=daily, dates=dates, covariance=covariance, eligible=eligible,
+                daily_core=daily_core, basis=basis, groups=groups, forward=forward, audit=audit)
+
+
+def final_target(inputs):
+    """Selected portfolio: 30/20/20/30 blend scaled to 10% ex-ante volatility, no caps."""
+    blend = np.einsum("tki,k->ti", inputs["basis"], BUDGETS)
+    return risk_normalize(blend, inputs["covariance"], TARGET_VOLATILITY)
+
+
 def summary(frame, start, end):
     sample = frame.loc[start:end]
     wealth = (1 + sample.net_return).cumprod()
@@ -88,33 +119,19 @@ def summary(frame, start, end):
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    monthly = monthly_returns()
-    daily = daily_returns(list(monthly.columns))
-    dates = rebalance_dates(daily.index)
-    dates = dates[(dates >= pd.Timestamp("1975-01-01")) & (dates <= monthly.index.max())]
-    slow, vol = daily_signal_and_vol(daily, dates)
-    eligible_frame = slow.notna() & vol.notna() & slow.ne(0)
-    eligible = eligible_frame.to_numpy()
-    covariance = daily_covariance_cube(daily, dates, eligible_frame)
-    daily_core = risk_normalize(inverse_vol_weight(slow, vol).to_numpy() * eligible, covariance)
-    monthly_basis, classes, audit = build_monthly_sleeves(monthly)
-    basis = dated_sleeves(monthly, monthly_basis, dates, daily_core, covariance, eligible)
-    mapped = classes.copy()
-    mapped.loc[mapped.index.isin(RATE_FUTURES_IN_FX)] = "FI"
-    groups = [mapped.eq(c).to_numpy() for c in sorted(mapped.unique())]
-    target = blended_target(basis, BUDGETS, covariance, groups, LIMITS)
-    forward = period_returns(daily, dates).reindex(columns=monthly.columns).reindex(dates).fillna(0).to_numpy()
-    actual, result = execute(target, covariance, forward, groups, eligible, LIMITS)
-    weights = pd.DataFrame(actual, index=dates, columns=monthly.columns)
-    assert (weights.abs().sum(axis=1) <= 4 + 1e-7).all()
-    assert (weights.sum(axis=1).abs() <= 1 + 1e-7).all()
-    marked = mark_daily(daily, weights)
+    inputs = build_portfolio_inputs()
+    dates, monthly, covariance = inputs["dates"], inputs["monthly"], inputs["covariance"]
+    target = final_target(inputs)
+    predicted = np.sqrt(np.maximum(np.einsum("ti,tij,tj->t", target, covariance, target), 0))
+    assert np.allclose(predicted[predicted > 0], TARGET_VOLATILITY), "Book not at the 10% ex-ante target"
+    weights = pd.DataFrame(target, index=dates, columns=monthly.columns)  # full rebalance to target
+    marked = mark_daily(inputs["daily"], weights)
     rows = [{"period": name, **summary(marked, start, end)}
             for name, (start, end) in EVALUATION.items()]
     pd.DataFrame(rows).to_csv(OUT / "performance.csv", index=False)
     marked.to_csv(OUT / "daily_returns_and_costs.csv", index_label="Date")
     weights.to_csv(OUT / "formation_weights.csv", index_label="Date")
-    audit.to_csv(OUT / "extra_trees_training_audit.csv", index=False)
+    inputs["audit"].to_csv(OUT / "extra_trees_training_audit.csv", index=False)
     fig, ax = plt.subplots(figsize=(11, 5))
     for label, (start, end) in EVALUATION.items():
         if label in ("IS_1976_2014", "OOS_2015_2025"):

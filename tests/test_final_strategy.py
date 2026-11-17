@@ -6,7 +6,7 @@ import pandas as pd
 
 from costs_and_execution import mark_daily
 from daily_baseline import construct_signal
-from portfolio_engine import constrain
+from portfolio_engine import constrain, risk_normalize
 from risk_model import LIMITS
 
 
@@ -35,6 +35,13 @@ class FinalStrategyTests(unittest.TestCase):
         self.assertLessEqual(np.abs(weights).sum(), LIMITS.gross + 1e-10)
         self.assertLessEqual(abs(weights.sum()), LIMITS.net + 1e-10)
         self.assertLessEqual(float(np.sqrt(weights[0] @ covariance[0] @ weights[0])), LIMITS.volatility + 1e-10)
+
+    def test_final_book_scaled_to_ten_percent_ex_ante(self):
+        raw = np.array([[3., 2., -1.], [0., 0., 0.]])
+        covariance = np.stack([np.eye(3) * .04, np.eye(3) * .04])
+        weights = risk_normalize(raw, covariance, .10)
+        self.assertAlmostEqual(float(np.sqrt(weights[0] @ covariance[0] @ weights[0])), .10)
+        self.assertTrue(np.all(weights[1] == 0))
 
 
 if __name__ == "__main__":
