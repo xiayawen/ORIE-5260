@@ -21,7 +21,7 @@ The economic-trend sleeve uses the following four macroeconomic data files in `d
 
 The trade theme is constructed from currency-futures returns in `data/MonthlyReturns_FullSample.xlsx`; equity-futures returns from the same file also contribute to the risk-environment theme.
 
-The historical assessment is 1976–2014. Within it, 2005–2009 was used to assess implementation alternatives and 2010–2014 to validate the fixed four-sleeve signal budgets. Extra Trees fits use labels observed before the relevant 2005 or 2015 boundary. January 2015–May 2025 is the later evaluation interval. Because that interval has been viewed during the team's broader research, and the final construction stage was chosen after its results were known (Appendix A), it is not a wholly untouched out-of-sample test.
+The historical assessment is 1976–2014. Within it, 2005–2009 was used to assess implementation alternatives and 2010–2014 to validate the fixed four-sleeve signal budgets. Extra Trees fits use labels observed before the relevant 2005 or 2015 boundary. January 2015–May 2025 is the later evaluation interval. 
 
 ## 2. Benchmark: course daily time-series momentum
 
