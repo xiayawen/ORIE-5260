@@ -10,6 +10,17 @@ The course baseline applies a long or short position to each market according to
 
 We use the 58 futures markets in `data/MonthlyReturns_FullSample.xlsx`, daily back-adjusted closes from `data/FuturesUnderlyingData_FullSample.zip`, the corresponding asset map and four economic time series. The backtest starts reporting results in January 1976, after a signal and risk-model warm-up, and ends in May 2025. Market prices are daily; decisions occur on a fixed 21-business-day grid anchored at 31 December 2014. A weight formed at a trading day's close starts earning returns on the following trading day. Monthly non-price observations enter only after their month-end date.
 
+The economic-trend sleeve uses the following four macroeconomic data files in `data/`:
+
+| File | Economic series | Use in the economic-trend sleeve |
+|---|---|---|
+| `INDPRO.csv` | US industrial production index | Growth trend. |
+| `CPIAUCSL.csv` | US consumer price index (CPI) | Inflation trend. |
+| `GS2.csv` | US two-year Treasury yield | Monetary-policy trend. |
+| `BAA10Y.csv` | Baa corporate bond yield spread over the ten-year Treasury yield | Credit-spread component of the risk-environment theme. |
+
+The trade theme is constructed from currency-futures returns in `data/MonthlyReturns_FullSample.xlsx`; equity-futures returns from the same file also contribute to the risk-environment theme.
+
 The historical assessment is 1976–2014. Within it, 2005–2009 was used to assess implementation alternatives and 2010–2014 to validate the fixed four-sleeve signal budgets. Extra Trees fits use labels observed before the relevant 2005 or 2015 boundary. January 2015–May 2025 is the later evaluation interval. Because that interval has been viewed during the team's broader research, and the final construction stage was chosen after its results were known (Appendix A), it is not a wholly untouched out-of-sample test.
 
 ## 2. Benchmark: course daily time-series momentum
