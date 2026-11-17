@@ -10,7 +10,8 @@ The main comparison covers **58 futures markets** from January 1976 to May 2025.
 2. Run `python daily_baseline.py` to rebuild the course baseline.
 3. Run `python run_final_strategy.py` to rebuild the selected four-sleeve portfolio.
 4. Run `python compare_baseline.py` for the matched 21-day IS/OOS comparison and figure.
-5. Read [the final report](report.md) for methods, results and limitations.
+5. Run `python exposure_sensitivity.py` for the gross and net exposure-limit check.
+6. Read [the final report](report.md) for methods, results and limitations.
 
 All source data needed for these commands are in `data/`. They include the full-sample monthly workbook, the asset map, three FRED series plus the credit-spread series, and the archive of daily back-adjusted futures closes. The baseline also evaluates a 66-market universe as a robustness check; the primary report comparison uses the same 58 markets for both strategies.
 
@@ -29,9 +30,11 @@ All source data needed for these commands are in `data/`. They include the full-
 | `data_utils.py` | Source loading, common instrument list and 21-business-day calendar. |
 | `run_final_strategy.py` | Combines the four sleeves at fixed 30%/20%/20%/30% signal budgets and saves weights, returns and daily statistics. |
 | `compare_baseline.py` | Aligns both strategies on the same 21-day period endpoints and saves performance, wealth and drawdown comparisons. |
+| `exposure_sensitivity.py` | Replays the selected portfolio with gross and net limits removed separately and together, plus a gross-matched control. Signals, other risk limits and execution remain fixed. |
 | `outputs/baseline/` | Baseline signals, volatility estimates, raw and final formation weights, return series, summary and anchor-grid sensitivity. |
 | `outputs/final_strategy/` | Selected strategy's daily returns, weights, model-fitting audit and statistics. |
 | `outputs/comparison/` | Matched-period returns, IS/OOS table, wealth figure and drawdown figure. |
+| `outputs/exposure_sensitivity/` | Exposure-limit performance, target-change frequencies, formation exposures, daily returns and later-period drawdown figure. |
 | `tests/` | Checks formation timing and portfolio constraints. |
 
 The final portfolio has an annual ex-ante volatility ceiling of 10%, gross exposure at most 4×, absolute net exposure at most 1×, and a 5% standalone volatility ceiling per asset class. It uses a 252-day sample covariance at each formation date. The selected cost convention is **2 basis points per unit traded plus four rolls per year at 2 basis points**; a fixed cost-aware execution parameter γ=5 moderates trading. The baseline uses an 11% ex-ante volatility target and does not impose the portfolio's exposure or asset-class limits. These differences are part of the enhancement and matter when interpreting returns.

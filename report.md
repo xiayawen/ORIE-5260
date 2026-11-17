@@ -108,6 +108,27 @@ Daily marking makes the final portfolio's later-period volatility **3.92%**, Sha
 
 The enhancement trades less and carries markedly less gross exposure in both periods. The reduced cost drag is consistent with cost-aware execution and smaller exposures, but the table does not isolate the causal effect of execution from changes in signals and risk limits. The baseline targets 11% ex-ante portfolio risk without exposure caps; the enhancement uses a 10% ceiling and caps. Their different risk budgets partly explain the absolute-return gap. An equal-risk comparison would be needed to attribute the remaining difference to signal quality alone.
 
+### Sensitivity to leverage and long–short imbalance limits
+
+To examine how much the final portfolio depends on its exposure controls, we adapt the gross/net-limit comparison and gross-matched-control idea contributed by [JodieeT](https://github.com/xiayawen/ORIE-5260/commit/3c340c5). The separate `exposure_sensitivity.py` replay keeps all four signals, the 10% portfolio-volatility ceiling, the 5% asset-class risk ceiling, formation dates and execution costs fixed. It removes the **4× gross cap**, the **±1× net cap**, or both. Gross exposure is the sum of absolute weights; imbalance is the absolute sum of signed weights. The figures below use daily returns and daily drawdowns, so they should be compared within this table rather than to the 21-day endpoint drawdowns in Section 4.
+
+| Period | Exposure rules | Net CAGR | Net Sharpe | Max daily drawdown | Avg. gross | Avg. absolute net | Annual turnover |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 1976–2014 | Selected: both caps | 5.08% | 1.004 | −12.90% | 1.47× | 0.62× | 3.55× |
+| 1976–2014 | Without gross cap | 5.19% | 1.004 | −12.90% | 1.57× | 0.64× | 3.92× |
+| 1976–2014 | Without net cap | 7.19% | 1.104 | −12.90% | 2.20× | 1.10× | 5.01× |
+| 1976–2014 | Without both caps | 7.89% | 1.138 | −12.90% | 2.48× | 1.19× | 5.78× |
+| 2015–May 2025 | **Selected: both caps** | **2.04%** | **0.522** | **−7.41%** | **1.30×** | **0.61×** | **2.49×** |
+| 2015–May 2025 | Without gross cap | 1.56% | 0.378 | −8.19% | 1.64× | 0.67× | 4.03× |
+| 2015–May 2025 | Without net cap | 1.80% | 0.381 | −9.30% | 2.26× | 1.48× | 3.91× |
+| 2015–May 2025 | Without both caps | 1.53% | 0.269 | −9.52% | 4.21× | 2.56× | 7.26× |
+
+![Later-period drawdown under alternative gross and net exposure limits](outputs/exposure_sensitivity/drawdown_sensitivity.png)
+
+Removing the gross cap changes the proposed target on **20.3%** of later-period formation dates; removing the net cap changes it on **58.6%**. The later-period drawdown and Sharpe are worse under each removal, with the largest turnover increase when both are removed. In sample, removing caps raises return and Sharpe, while the worst *daily* drawdown happens to be the same across the variants. Thus the apparent benefit of limits is period-dependent; the later-period results are descriptive, not a fresh rule-selection exercise.
+
+The gross-matched no-net-cap control exactly reproduces the selected weights and returns. This is a structural result: our net cap reduces all instrument weights by a common factor rather than trimming only the larger side. Matching the uncapped-net target's gross exposure to the selected target therefore recovers the same portfolio. The cap changes **scale**, not the long–short composition. This distinction prevents us from attributing its effect to a better balance of long and short signals. Full results and the target-change audit are in `outputs/exposure_sensitivity/`.
+
 ## 6. Limitations and conclusion
 
 The back-adjusted daily series omit exact contract-selection and roll-date implementation. The cost convention abstracts from bid-ask variation, financing and market impact. Sample covariance can be unstable when cross-market correlations change quickly. Rebalance-grid sensitivity is material for the baseline: the 58-market benchmark's later-period Sharpe ranges from roughly 0.05 to 0.24 across tested grid offsets, with the chosen anchor at the upper end. The four-sleeve enhancement has not yet had an equivalent staggered-grid evaluation in this final submission.
@@ -118,4 +139,4 @@ The selected four-sleeve portfolio has a lower absolute return than the baseline
 
 ## Reproduction
 
-Run `python daily_baseline.py`, `python run_final_strategy.py`, then `python compare_baseline.py` from the repository root. Full daily results are in `outputs/final_strategy/`; aligned 21-day returns and statistics are in `outputs/comparison/`; baseline and anchor-sensitivity results are in `outputs/baseline/`.
+Run `python daily_baseline.py`, `python run_final_strategy.py`, `python compare_baseline.py`, then `python exposure_sensitivity.py` from the repository root. Full daily results are in `outputs/final_strategy/`; aligned 21-day returns and statistics are in `outputs/comparison/`; baseline and anchor-sensitivity results are in `outputs/baseline/`; exposure-limit comparisons are in `outputs/exposure_sensitivity/`.
