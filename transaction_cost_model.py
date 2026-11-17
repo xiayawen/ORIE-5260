@@ -101,7 +101,11 @@ def trailing_contract_volume(index: pd.DatetimeIndex, instruments, window: int =
         daily = pd.read_csv(path, index_col=0, parse_dates=True).sort_index()
         volume = pd.to_numeric(daily["Volume"], errors="coerce").where(lambda v: v > 0)
         trailing = volume.rolling(window, min_periods=window // 2).median()
-        out[instrument] = trailing.resample("ME").last().reindex(index, method="ffill", limit=1)
+        # Use the offset object rather than the version-specific "M"/"ME"
+        # string alias so this works across the project's supported pandas
+        # environments without changing the month-end convention.
+        out[instrument] = trailing.resample(pd.offsets.MonthEnd()).last().reindex(
+            index, method="ffill", limit=1)
     return pd.DataFrame(out, index=index).reindex(columns=list(instruments))
 
 

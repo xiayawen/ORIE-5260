@@ -17,6 +17,7 @@ from covariance_risk_validation import covariance,HALFLIFE
 from risk_budgeting import ROOT,read_full_sample_returns,risk_budget_weights
 from futures_factor_backtest import evaluate
 from unified_portfolio import Limits,risk_normalize,constrain,blended_target,rebalance_metrics,fit_allocation,cost_aware_path
+from turning_point_model.dynamic_speed import fit_frozen_mixing_parameters,dynamic_speed_direction
 
 OUT=ROOT/"outputs"/"portfolio_optimization"
 LIMITS=Limits()
@@ -81,6 +82,21 @@ def statistics(b,dates,start,end=None):
         absolute_net_exposure=float(np.mean(np.abs(b["net_exposure"][mask]))),
         cumulative_net_return=float((1+ret).prod()-1))
     return result
+
+
+def hac_annual_mean_difference(series,max_lag=3):
+    """Annualized mean difference with a Bartlett Newey-West confidence interval."""
+    x=pd.Series(series).dropna().to_numpy(dtype=float);n=len(x)
+    if n<2:return dict(months=n,annual_mean_difference=np.nan,hac_standard_error=np.nan,
+                       confidence_lower=np.nan,confidence_upper=np.nan,t_statistic=np.nan)
+    centered=x-x.mean();long_run=float(centered@centered/n)
+    for lag in range(1,min(max_lag,n-1)+1):
+        covariance=float(centered[lag:]@centered[:-lag]/n)
+        long_run+=2*(1-lag/(min(max_lag,n-1)+1))*covariance
+    annual=float(x.mean()*12);standard_error=float(np.sqrt(max(long_run,0)/n)*12)
+    return dict(months=n,annual_mean_difference=annual,hac_standard_error=standard_error,
+                confidence_lower=annual-1.96*standard_error,confidence_upper=annual+1.96*standard_error,
+                t_statistic=annual/standard_error if standard_error>0 else np.nan)
 
 
 def run_target(target,inp,tracking=None):
@@ -211,6 +227,49 @@ def main():
         t=blended_target(selected_basis,allocation,cov,groups,LIMITS)
         actual["ValidationSelectedFullRebalance"],implementations["ValidationSelectedFullRebalance"]=run_target(t,full)
         actual["ValidationSelected"],implementations["ValidationSelected"]=run_target(t,full,chosen_tracking)
+        if selected.candidate=="FixedFour":
+            # Apply the previously frozen turning-point rule only after the
+            # common portfolio risk constraints.  This preserves the intended
+            # conditional de-risking instead of re-levering the reduced target.
+            # Execution and all remaining assumptions are identical to the
+            # validation-selected FixedFour comparison above.
+            turning_raw=t*turning_modifier
+            turning_target=constrain(turning_raw,cov,groups,LIMITS)
+            # A one-sided reduction can increase absolute net exposure by
+            # removing an offsetting position. Repair any resulting breach,
+            # but do not scale a compliant reduced target back up.
+            relevered=np.linalg.norm(turning_target,axis=1)>np.linalg.norm(turning_raw,axis=1)+1e-12
+            turning_target[relevered]=turning_raw[relevered]
+            actual["ValidationSelected_Turning"],implementations["ValidationSelected_Turning"]=run_target(
+                turning_target,full,chosen_tracking)
+            # Paper-inspired state-dependent slow/fast blend. Parameters use
+            # returns through 2004 only and are frozen before the first live
+            # target formed at 2004-12 for execution in 2005-01.
+            speed_parameters=fit_frozen_mixing_parameters(r,"2004-12-31")
+            speed_parameters.to_csv(OUT/"dynamic_speed_parameters.csv")
+            speed_direction=dynamic_speed_direction(r,speed_parameters)
+            speed_raw=econ.risk_weights(speed_direction,full["pipe"].sleeve_vol).fillna(0).to_numpy()
+            speed_core=risk_normalize(speed_raw*full["eligible"],cov)
+            static_core=full["binaryewma"]
+
+            def replace_core(source,new_core):
+                """Replace core and return inactive sleeve budgets to that core."""
+                out=source.copy();old_core=source[:,0].copy()
+                for sleeve in range(1,source.shape[1]):
+                    active=np.abs(source[:,sleeve]-old_core).sum(axis=1)>1e-12
+                    out[:,sleeve]=np.where(active[:,None],source[:,sleeve],new_core)
+                out[:,0]=new_core
+                return out
+
+            static_target=blended_target(replace_core(selected_basis,static_core),allocation,cov,groups,LIMITS)
+            speed_target=blended_target(replace_core(selected_basis,speed_core),allocation,cov,groups,LIMITS)
+            live=r.index>=pd.Timestamp("2004-12-31")
+            static_target=np.where(live[:,None],static_target,t)
+            speed_target=np.where(live[:,None],speed_target,t)
+            actual["ValidationSelected_StaticSlow"],implementations["ValidationSelected_StaticSlow"]=run_target(
+                static_target,full,chosen_tracking)
+            actual["ValidationSelected_DynamicSpeed"],implementations["ValidationSelected_DynamicSpeed"]=run_target(
+                speed_target,full,chosen_tracking)
         for j,label in enumerate(["Macro","Factor","ML"],start=1):
             removed=allocation.copy();removed[0]+=removed[j];removed[j]=0
             ablation=blended_target(selected_basis,removed,cov,groups,LIMITS)
@@ -230,13 +289,38 @@ def main():
     net.to_csv(OUT/"monthly_net_returns.csv")
     conditional=[]
     for name in net:
-        if name=="ValidationSelected" or name.startswith("ValidationSelected_without_"):
+        if name in ("ValidationSelected","ValidationSelected_Turning","ValidationSelected_StaticSlow",
+                    "ValidationSelected_DynamicSpeed") or name.startswith("ValidationSelected_without_"):
             for period,start,end in [("validation_diagnostic","2010-01-01","2014-11-30"),
                                       ("later_diagnostic","2015-01-01",None)]:
                 x=net.loc[start:end,name]
                 conditional.append(dict(strategy=name,period=period,months=len(x),
                     annual_mean=x.mean()*12,net_sharpe=x.mean()/x.std()*np.sqrt(12)))
     pd.DataFrame(conditional).to_csv(OUT/"selected_conditional_ablation.csv",index=False)
+    speed_names=["ValidationSelected","ValidationSelected_Turning","ValidationSelected_StaticSlow",
+                 "ValidationSelected_DynamicSpeed"]
+    speed_periods=[("development_2005_2009","2005-01-01","2009-12-31"),
+                   ("validation_2010_2014","2010-01-01","2014-11-30"),
+                   ("pre2015_evaluation_2005_2014","2005-01-01","2014-12-31"),
+                   ("later_2015_2025","2015-01-01",None)]
+    speed_rows=[]
+    for name in speed_names:
+        if name not in implementations:continue
+        for period,start,end in speed_periods:
+            speed_rows.append(dict(strategy=name,period=period,**statistics(
+                implementations[name],r.index,start,end)))
+    pd.DataFrame(speed_rows).to_csv(OUT/"dynamic_speed_comparison.csv",index=False)
+    incremental=[]
+    pairs=[("turning_vs_selected","ValidationSelected_Turning","ValidationSelected"),
+           ("static_slow_vs_selected","ValidationSelected_StaticSlow","ValidationSelected"),
+           ("dynamic_speed_vs_selected","ValidationSelected_DynamicSpeed","ValidationSelected"),
+           ("dynamic_speed_vs_static_slow","ValidationSelected_DynamicSpeed","ValidationSelected_StaticSlow")]
+    for comparison,left,right in pairs:
+        for period,start,end in speed_periods:
+            difference=net.loc[start:end,left]-net.loc[start:end,right]
+            incremental.append(dict(comparison=comparison,period=period,left=left,right=right,
+                                    **hac_annual_mean_difference(difference)))
+    pd.DataFrame(incremental).to_csv(OUT/"dynamic_speed_incremental_hac.csv",index=False)
     full["audit"].to_csv(OUT/"classifier_audit.csv",index=False)
     # Isolate the cost/risk trade-off without changing the selected configuration.
     legacy_rows=[]
@@ -278,11 +362,15 @@ def main():
     pd.DataFrame([dict(strategy=n,**evaluate(net.loc[strict,n])) for n in net]).to_csv(OUT/"strict_missing_sensitivity.csv",index=False)
     # Left-tail quarterly diagnostics for all main portfolios, current-period bins descriptive only.
     main=list(dict.fromkeys(["FairBinary12","FairBinary12CostAware","PureTrend","FixedFour",
-                            "OptimizedFour","OptimizedCostAware",selected_name]))
+                            "OptimizedFour","OptimizedCostAware",selected_name,
+                            "ValidationSelected_Turning","ValidationSelected_StaticSlow",
+                            "ValidationSelected_DynamicSpeed"]))
+    main=[n for n in main if n in net]
     monthly=net.loc["2015-01-01":,main]
-    quarterly=(1+monthly).resample("QE").prod()-1
-    market=(1+r.SP.loc["2015-01-01":]).resample("QE").prod()-1
-    complete=monthly.resample("QE").count().min(axis=1).eq(3)&r.SP.loc["2015-01-01":].resample("QE").count().eq(3)
+    quarter_end=pd.offsets.QuarterEnd()
+    quarterly=(1+monthly).resample(quarter_end).prod()-1
+    market=(1+r.SP.loc["2015-01-01":]).resample(quarter_end).prod()-1
+    complete=monthly.resample(quarter_end).count().min(axis=1).eq(3)&r.SP.loc["2015-01-01":].resample(quarter_end).count().eq(3)
     quarterly=quarterly.loc[complete];market=market.reindex(quarterly.index)
     bins=pd.qcut(market,10,labels=False)+1
     tail=[]
@@ -290,7 +378,8 @@ def main():
         for decile,value in (quarterly[n].groupby(bins).mean()*4).items():
             tail.append(dict(strategy=n,market_decile=decile,annualized_quarterly_return=value))
     pd.DataFrame(tail).to_csv(OUT/"quarterly_sp_smile.csv",index=False)
-    display=[n for n in dict.fromkeys(["FairBinary12CostAware","ValidationSelectedFullRebalance",selected_name,"OptimizedCostAware"]) if n in net]
+    display=[n for n in dict.fromkeys([selected_name,"ValidationSelected_Turning",
+             "ValidationSelected_StaticSlow","ValidationSelected_DynamicSpeed"]) if n in net]
     later=net.loc["2015-01-01":,display]
     wealth=pd.concat([pd.DataFrame(1.,index=[pd.Timestamp("2014-12-31")],columns=display),(1+later).cumprod()])
     fig,(ax,dd)=plt.subplots(2,1,figsize=(12,8),sharex=True,layout="constrained",gridspec_kw={"height_ratios":[2,1]})
