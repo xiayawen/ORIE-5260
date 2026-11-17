@@ -1,6 +1,6 @@
 # 公平对照、消融与收益—成本—风险优化
 
-English version: [PORTFOLIO_OPTIMIZATION_REPORT_EN.md](PORTFOLIO_OPTIMIZATION_REPORT_EN.md)
+English academic report: [portfolio_optimisation_report_1.md](portfolio_optimisation_report_1.md)
 
 运行：`OMP_NUM_THREADS=2 MPLCONFIGDIR=/private/tmp/orie-mpl python3 optimize_combined_portfolio.py`。
 测试：`python3 -m unittest test_unified_portfolio -v`。
