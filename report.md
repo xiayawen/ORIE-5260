@@ -234,9 +234,11 @@ These issues do not negate the reported historical results, but they prevent a s
 
 ## 7. Conclusion
 
-The selected 42-input, four-sleeve futures portfolio delivers **higher measured net Sharpe in both reported periods** than the course TSMOM benchmark when both target **11% ex-ante volatility**. In the out-of-sample historical interval, it also earns a higher annual net return and experiences a substantially smaller maximum drawdown at matched reporting endpoints. However, the historical maximum drawdown is worse, the out-of-sample Sharpe remains moderate, and higher turnover and notional exposures create practical costs and risk. Because performance attribution and formal statistical uncertainty are not established here, the evidence supports a **promising but provisional diversification-of-signals result**, rather than a proven incremental premium from any specific sleeve.
+We extend the course time-series momentum strategy with three additional signal sleeves: a U.S. economic-trend sleeve, a within-class negative-skew ranking, and an Extra Trees directional forecast. Both portfolios are scaled to 11% ex-ante volatility and charged the same trading and roll costs.
 
-The selected portfolio **does not include a turning-point overlay**; that research is separate from the final four-sleeve strategy described here.
+Over 1976–2014, the enhanced portfolio delivers a net Sharpe ratio of 1.28 against 1.22 for the baseline, although its maximum drawdown is deeper (−23.3% vs −18.2%). Over 2015–May 2025, a weaker period for trend following, net Sharpe rises from 0.24 to 0.36, realized volatility falls from 13.3% to 11.3%, and maximum drawdown narrows from −25.5% to −15.1%.
+
+The out-of-sample improvement is consistent with signal diversification. The economic-trend sleeve, for example, has a correlation of about 0.3 with price trend and generated positive returns in 2016 and 2018, when price trend lost money; removing it lowers out-of-sample Sharpe by roughly 0.10. These gains come with higher turnover (53.8× vs 43.5× NAV per year) and gross exposure above 12× NAV. Because the 2015–2025 period was examined during development, and the Sharpe differences are not statistically tested, we regard the results as supportive but not conclusive.
 
 ## Appendix A. Reproduction and research artifacts
 
