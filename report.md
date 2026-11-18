@@ -43,6 +43,9 @@ The enhanced strategy combines the following sleeves. The percentages represent 
 | **Negative skew** | **20%** | Ranks trailing 12-month return skewness within each asset class, buying markets with relatively more negative skew and selling peers with relatively less negative skew. Ranks are centered; at least four eligible markets are required per class. This direction is an empirical hypothesis rather than a presumed risk premium. |
 | **Extra Trees** | **30%** | Estimates the probability of a positive next-month return and maps it to a continuous directional score, `2 × predicted probability − 1`; positions are then inverse-volatility weighted and normalized. |
 
+
+Economic-trend sleeve. Following Brooks et al. (2023) and Lecture 11, five U.S. macro themes are turned into 12-month trend signals: growth (industrial production), inflation (CPI), trade (USD trend), monetary policy (2-year yield) and risk aversion (equity trend and Baa spread). Each theme takes positions using the Lecture 11 sign table, e.g. rising growth is long equities and commodities and short bonds. Only USD-relevant markets are traded because only U.S. macro data are used. The signal form, three-month smoothing and 20% budget were fixed on 1980–1997 data. Standalone, the sleeve earns a net Sharpe of about 0.5 in 1980–2014 and 0.4 in 2015–2025, with only a 0.3 correlation to price trend. It made money in years when price trend lost, such as 2016 and 2018. Removing it from the final portfolio (returning its 20% to price trend) lowers out-of-sample Sharpe by about 0.10.
+
 Each available sleeve is normalized to a common predicted-risk scale. **If a non-price sleeve is unavailable, its assigned budget is returned to the daily price-trend sleeve.** Thus, effective sleeve allocations can differ from the nominal 30/20/20/30 budgets at some dates.
 
 Let $\bar w_t^{(s)}$ denote the risk-normalized proposed weights for sleeve $s$, after reallocating unavailable budgets to price trend. The combined signal portfolio is
@@ -55,7 +58,6 @@ The available-sleeve budgets $b_{s,t}$ correspond to the nominal allocations abo
 
 where $\widehat\Sigma_t$ is the trailing daily covariance estimate over eligible markets. The implementation repairs negative covariance eigenvalues arising from incomplete observations. No notional-exposure caps are imposed.
 
-Economic-trend sleeve. Following Brooks et al. (2023), five U.S. macro themes (growth, inflation, trade, monetary policy, risk aversion) are turned into 12-month trend signals and mapped to futures directions with the Lecture 11 sign table, using USD-relevant markets only. Specification choices were fixed on 1980–1997. On the daily framework, the sleeve alone earns a Sharpe of 0.54 (1980–2014) and 0.41 (2015–May 2025), with a 0.29–0.33 correlation to price trend. Removing it (its 20% budget goes back to price trend) lowers the portfolio’s Sharpe from 1.27 to 1.24 in-sample and from 0.33 to 0.23 out-of-sample. It helped most when price trend lost money, e.g. 2016 (+4.0% vs −9.7%) and 2018 (+6.0% vs −11.3%).
 
 ### 3.3 Factor construction, train-only screening and Extra Trees
 
