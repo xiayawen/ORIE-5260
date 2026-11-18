@@ -1,7 +1,7 @@
 """Run the selected daily-signal four-sleeve futures portfolio.
 
 Four fixed signal budgets: 30% price trend, 20% macro, 20% negative skew,
-30% frozen Extra Trees. The blended book is scaled to 10% ex-ante volatility
+30% frozen Extra Trees. The blended book is scaled to 11% ex-ante volatility
 (252-day daily covariance) with no exposure caps, and fully rebalanced every
 21 business days; NAV is marked daily. The capped and cost-aware variants are
 appendix diagnostics (decompose_steps.py, exposure_sensitivity.py).
