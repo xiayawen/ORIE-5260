@@ -1,6 +1,6 @@
 # ORIE 5260: Final daily futures strategy
 
-This submission compares the course's daily time-series momentum (TSMOM) baseline with a **four-sleeve, 42-input futures portfolio** across 58 markets. Both target **11% annualized ex-ante volatility** and form positions every 21 business days. The final portfolio combines daily price trend (30% signal budget), economic trend (20%), within-class negative skew (20%), and a frozen Extra Trees forecast (30%). It has no gross or net exposure caps. See the [main report](report.md) for the method, results, and limitations.
+This submission compares the course's daily time-series momentum (TSMOM) baseline with a **four-sleeve, 42-input futures portfolio** across 58 markets. Both target **11% annualized ex-ante volatility** and form positions every 21 business days. The final portfolio combines daily price trend (30% signal budget), economic trend (20%), within-class negative skew (20%), and a frozen Extra Trees forecast (30%). It has no gross or net exposure caps. See the [final report](<report (1).md>) for the method, results, and limitations.
 
 On matched 21-day endpoints, the final portfolio's net Sharpe is **1.283** in 1976–2014 and **0.356** in January 2015–May 2025; the baseline's is **1.222** and **0.243**, respectively. The out-of-sample period was examined during research and is not an untouched holdout.
 
@@ -31,8 +31,8 @@ The baseline command generates the comparison series in `outputs/baseline/`. The
 | `futures_portfolio/backtests/selected42_target11.py`, `selected42_metrics.py` | **Final strategy runner** and matched-period performance measures. |
 | `outputs/baseline/` | The retained course baseline series used in the comparison. |
 | [outputs/final_strategy/](outputs/final_strategy/) | Final performance CSV, aligned and daily returns, Sharpe chart, and in-sample/out-of-sample drawdown charts. Filenames retain `selected42_target11` to identify the specification. |
-| [report.md](report.md), [docs/report_equations/](docs/report_equations/) | Main academic report and its GitHub-compatible equation images and source definitions. |
-| [report (1).md](<report (1).md>) | Separate collaborator-submitted report copy, retained unchanged. |
+| [report (1).md](<report (1).md>) | Final academic report. |
+| [report.md](report.md), [docs/report_equations/](docs/report_equations/) | Earlier report copy and its GitHub-compatible equation images and source definitions. |
 
 The 42-input set was selected using pre-2005 directional IC and HAC evidence and held fixed for the pre-2015 model refit. Before an out-of-training ML forecast is available, its budget returns to price trend. Historical screening used an earlier 10% research convention; all **submitted portfolio results** use the 11% target.
 
