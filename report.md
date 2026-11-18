@@ -1,86 +1,165 @@
-# A Daily-Signal Four-Sleeve Futures Portfolio
+# Enhancing Time-Series Momentum with Macro, Cross-Sectional, and Nonlinear Signals: Evidence from 58 Futures Markets
 
 ## Abstract
 
-We compare a diversified four-sleeve futures strategy with the course's daily time-series momentum baseline across 58 markets. The selected strategy combines daily price trend (30% signal budget), economic trend (20%), within-class negative skew (20%) and a **fixed 42-input Extra Trees** signal (30%). Both portfolios target **11% annualized ex-ante volatility** and rebalance every 21 business days. On identical 21-day reporting endpoints, the selected strategy's net Sharpe is **1.283 versus 1.222** for the baseline in 1976–2014 and **0.356 versus 0.243** in January 2015–May 2025. Its out-of-sample maximum endpoint drawdown is **−15.12% versus −25.48%**. These results come with substantial gross and net exposure, and the out-of-sample period was examined during research rather than remaining an untouched holdout.
+We investigate whether combining time-series momentum with macroeconomic, cross-sectional, and nonlinear signals improves the risk-adjusted performance of a diversified futures portfolio. Our strategy allocates signal budgets to daily price trends (30%), economic trends (20%), within-asset-class negative-skew rankings (20%), and a 42-input Extra Trees classifier (30%). We evaluate the strategy against the course's daily time-series momentum (TSMOM) benchmark across 58 futures markets from January 1976 through May 2025. Both strategies target **11% annualized ex-ante volatility**, rebalance every 21 business days, and are compared at identical reporting endpoints. The enhanced strategy records a net Sharpe ratio of **1.283 versus 1.222** in 1976–2014 and **0.356 versus 0.243** in 2015–May 2025. In the out-of-sample period, maximum endpoint drawdown is **−15.12% versus −25.48%**; however, historical drawdown is deeper for the enhanced strategy. The observed differences are descriptive rather than evidence of statistically established superiority: the earlier sample includes years before the machine-learning sleeve was active, and the out-of-sample period was examined during model development. High notional exposure and simplified trading-cost assumptions further limit practical conclusions.
 
-## 1. Objective, data and evaluation design
+## 1. Introduction and research question
 
-The baseline uses each future's own trailing price direction. We ask whether economic, cross-sectional and nonlinear information improves the portfolio's return per unit of risk while preserving a transparent price-trend core.
+Time-series momentum (TSMOM) takes positions according to each market's own historical price trend. Although this approach provides a transparent, diversified starting point, reliance on a single price-trend signal may leave the portfolio sensitive to noisy trends, changing economic conditions, and concentration in common risk exposures. We investigate whether additional information can improve its realized return per unit of risk without removing the core momentum allocation.
 
-The universe contains **58 futures markets** across equity, fixed income, commodities and FX. [`data/MonthlyReturns_FullSample.xlsx`](data/MonthlyReturns_FullSample.xlsx) supplies monthly returns and the instrument mapping; [`data/FuturesUnderlyingData_FullSample.zip`](data/FuturesUnderlyingData_FullSample.zip) supplies daily back-adjusted prices. Industrial production (`INDPRO.csv`), consumer prices (`CPIAUCSL.csv`), the two-year Treasury yield (`GS2.csv`) and the Baa–Treasury spread (`BAA10Y.csv`) supply external macroeconomic series. Currency and equity futures returns provide the remaining economic-theme inputs. The reported backtest spans **January 1976–May 2025**, after the required signal and risk-model warm-up.
+Our four-sleeve construction tests three complementary hypotheses. **Economic trend** signals may convey information about growth, inflation, trade, monetary policy, and risk conditions that is not fully summarized by recent prices. **Within-class negative-skew** rankings test whether return-distribution asymmetry helps discriminate opportunities across futures within the same asset class; this is an exploratory predictive hypothesis, not an assumed established premium. **Extra Trees** tests whether nonlinear combinations of price and peer characteristics can provide additional directional information. A daily price-trend sleeve anchors the portfolio to the course benchmark.
 
-Weights are formed at the close every **21 business days** and start earning returns on the following trading day. Positions and costs are marked daily. We compare strategies on the same 21-day endpoints: 476 periods in 1976–2014 and 128 in 2015–May 2025. The in-sample period contains the pre-2005 training history and subsequent validation. Extra Trees features and model parameters are set using information available before the 2005 and 2015 boundaries; the 2015–2025 out-of-sample period was repeatedly viewed during project development.
+The central question is: **Does combining these signal families improve net risk-adjusted performance relative to a daily TSMOM benchmark when the two portfolios use the same ex-ante volatility target and reporting dates?** We also examine turnover, transaction costs, drawdowns, and exposure to assess whether any measured gains are practically meaningful.
 
-## 2. Course baseline
+## 2. Data and evaluation design
 
-At each formation, the benchmark takes the sign of each eligible market's trailing **252-trading-day** compounded return, divides by its trailing 252-day annualized volatility and averages over eligible markets. At least 200 valid daily observations are required. It scales the whole book to **11% ex-ante annual volatility** using a trailing 252-day daily sample covariance. There are no gross, net or asset-class exposure caps. The primary comparison uses the 58-market baseline generated by [`daily_baseline.py`](daily_baseline.py); alternative baseline settings remain in [`outputs/baseline/`](outputs/baseline/).
+### 2.1 Futures universe and information sources
 
-## 3. Selected enhancement
+The investment universe comprises **58 futures markets** across equities, fixed income, commodities, and foreign exchange (FX). The project uses [`data/FuturesUnderlyingData_FullSample.zip`](data/FuturesUnderlyingData_FullSample.zip) for daily back-adjusted prices, [`data/MonthlyReturns_FullSample.xlsx`](data/MonthlyReturns_FullSample.xlsx) for monthly returns, and [`data/AssetMapCsv.csv`](data/AssetMapCsv.csv) for instrument mapping. Macroeconomic inputs include industrial production (`INDPRO.csv`), consumer prices (`CPIAUCSL.csv`), the two-year Treasury yield (`GS2.csv`), and the Baa–Treasury spread (`BAA10Y.csv`); currency and equity futures returns supply additional economic-theme information.
 
-The four percentages below are **signal budgets** used to blend proposed sleeve weights; they are not realized risk contributions. Each available sleeve is normalized to a common predicted-risk scale before blending. When a non-price sleeve is unavailable, its budget returns to the daily price trend.
+The reported evaluation spans **January 1976–May 2025**, after the required signal and risk-estimation warm-up. Eligibility depends on available historical observations; the price-trend benchmark requires at least 200 valid observations within its trailing 252-trading-day window.
 
-| Sleeve | Budget | Objective and construction |
+### 2.2 Trading protocol and research chronology
+
+Portfolio weights are formed at the close **every 21 business days** and begin earning returns on the following trading day. Holdings and transaction costs are marked daily, while the primary comparison uses identical 21-business-day reporting endpoints: **476 periods in 1976–2014** and **128 periods in January 2015–May 2025**. With 252 trading days per year, 21-day returns are annualized using 12 periods per year.
+
+The **1976–2014 historical interval is not a single homogeneous fully active four-sleeve test**. The Extra Trees sleeve is not applied out of training before 2005; its unavailable signal budget is reassigned to price momentum. The machine-learning feature set was screened using pre-2005 information and subsequently used in chronological model fitting, including a refit with labels available before 2015. The **2015–May 2025 interval is an out-of-sample historical evaluation**, not a pristine holdout, because its results were viewed while the team examined alternative model and portfolio configurations. We retain the chronological distinction throughout the interpretation.
+
+## 3. Strategy methodology
+
+### 3.1 Course TSMOM benchmark
+
+At each formation date, the baseline takes the sign of each eligible market's **trailing 252-trading-day compounded return**, scales it inversely by that market's trailing 252-day annualized volatility, and averages across eligible instruments. A trailing **252-day daily sample covariance** is then used to scale the overall portfolio to **11% annualized ex-ante volatility**. The baseline imposes **no gross, net, or asset-class exposure caps**. Its primary implementation is [`daily_baseline.py`](daily_baseline.py).
+
+### 3.2 Four complementary signal sleeves
+
+The enhanced strategy combines the following sleeves. The percentages represent **budgets applied to normalized sleeve weights**, not realized risk contributions.
+
+| Sleeve | Signal budget | Economic rationale and implementation |
 |---|---:|---|
-| Daily price trend | 30% | Preserve the benchmark's 252-day direction, inverse-volatility weighting and recent-trading eligibility. |
-| Economic trend | 20% | Map growth, inflation, trade, monetary policy and risk-environment themes into asset-class directions. Lag industrial production and CPI one extra month, smooth theme directions over three months, then combine equal-risk theme portfolios. |
-| Negative skew | 20% | Rank trailing 12-month return skewness within each asset class. Center ranks so relatively more negatively skewed markets are long and peers with less negative skew are short; require at least four eligible markets per class. |
-| Extra Trees | 30% | Convert the predicted probability of a positive next-month return into the continuous direction `2 × probability − 1`, then inverse-volatility weight and normalize. |
+| **Daily price trend** | **30%** | Retains the benchmark's 252-day directional signal, inverse-volatility construction, and market eligibility rules. |
+| **Economic trend** | **20%** | Maps growth, inflation, trade, monetary-policy, and risk-environment themes into asset-class directions. Industrial production and CPI are lagged one additional month; theme directions are smoothed over three months and combined as equal-risk theme portfolios. |
+| **Negative skew** | **20%** | Ranks trailing 12-month return skewness within each asset class, buying markets with relatively more negative skew and selling peers with relatively less negative skew. Ranks are centered; at least four eligible markets are required per class. This direction is an empirical hypothesis rather than a presumed risk premium. |
+| **Extra Trees** | **30%** | Estimates the probability of a positive next-month return and maps it to a continuous directional score, `2 × predicted probability − 1`; positions are then inverse-volatility weighted and normalized. |
 
-The Extra Trees classifier uses **42 fixed inputs: 20 raw price/peer features, 18 within-class ranks and four asset-class indicators**. These were screened before 2005 from 62 numerical candidates: a feature needed absolute mean monthly rank IC of at least **0.01** and a directionally consistent **Newey–West HAC t-statistic of at least 1.96 in absolute value**, using six lags. The four class indicators were retained as controls. This is a nominal screen across correlated features, without a multiple-testing correction. The model has 200 trees, maximum depth 6, minimum leaf size 30, `max_features=0.7` and seed 5260. The same feature list is used when the model is refitted with labels available before 2015; it is frozen thereafter. It does not provide an active out-of-training sleeve before 2005, so that budget goes to price trend. The exact list and model timing are in [`frozen_selection.json`](outputs/ic_t_feature_filter/frozen_selection.json) and the [IC and HAC screening report](reports/research/IC_T_FILTER_REPORT.md).
+Each available sleeve is normalized to a common predicted-risk scale. **If a non-price sleeve is unavailable, its assigned budget is returned to the daily price-trend sleeve.** Thus, effective sleeve allocations can differ from the nominal 30/20/20/30 budgets at some dates.
 
-At each formation, the portfolio estimates covariance from the preceding **252 daily returns** of eligible markets, repairs negative eigenvalues from incomplete observations, and scales the 30/20/20/30 blend to **11% annualized ex-ante volatility**, matching the baseline's target. The selected book has **no gross, net or class exposure cap** and trades fully to its target. The assumed cost is **2 basis points per unit of traded notional**, plus four rolls per year at 2 basis points on held gross notional. It omits financing, variable spreads and market impact. The selected construction is implemented in [`orie5260/presentation/prepare_results.py`](orie5260/presentation/prepare_results.py), invoked by `python run.py selected-42`; its saved probabilities come from the chronological screening run.
+Let $\bar w_t^{(s)}$ denote the risk-normalized proposed weights for sleeve $s$, after reallocating unavailable budgets to price trend. The combined signal portfolio is
 
-## 4. Performance versus the baseline
+$$
+\widetilde w_t=\sum_{s\in\{P,E,S,ML\}} b_{s,t}\bar w_t^{(s)},
+\qquad \sum_s b_{s,t}=1.
+$$
 
-The following table uses **matched 21-business-day endpoints**. Annual net return is 12 times the mean period return; annual volatility is the period standard deviation times √12; Sharpe assumes a zero cash hurdle. CAGR compounds the period returns. Drawdown is measured at those same endpoints.
+The available-sleeve budgets $b_{s,t}$ correspond to the nominal allocations above except when reallocation is required. The portfolio is then scaled to the **same 11% ex-ante risk target as the benchmark**:
 
-| Period | Strategy | Annual net return | CAGR | Annual volatility | Net Sharpe | Maximum endpoint drawdown |
+$$
+ w_t=\widetilde w_t\frac{0.11}{\sqrt{252\,\widetilde w_t^{\mathsf T}\widehat\Sigma_t\widetilde w_t}},
+$$
+
+where $\widehat\Sigma_t$ is the trailing daily covariance estimate over eligible markets. The implementation repairs negative covariance eigenvalues arising from incomplete observations. No notional-exposure caps are imposed.
+
+### 3.3 Extra Trees features and model-selection chronology
+
+The selected classifier uses **42 fixed inputs**: 20 raw price/peer characteristics, 18 within-class rank features, and four asset-class indicators. Before 2005, 62 numerical candidates were screened using an absolute mean monthly rank information coefficient (IC) threshold of **0.01** and a directionally consistent **Newey–West HAC t-statistic threshold of 1.96 in absolute value**, estimated with six lags. The asset-class indicators were retained as controls. The screen was nominal and **did not adjust for multiple testing across correlated candidates**.
+
+The Extra Trees classifier uses **200 trees**, maximum depth **6**, minimum leaf size **30**, `max_features=0.7`, and random seed **5260**. The 42-input feature list stays fixed when the model is refitted with data available before 2015; out-of-sample evaluation does not involve a new feature screen. The selection chronology, feature list, and supporting outputs appear in [`frozen_selection.json`](outputs/ic_t_feature_filter/frozen_selection.json) and the [IC/HAC screening report](reports/research/IC_T_FILTER_REPORT.md).
+
+The team also examined an IC-only feature filter, IC-plus-HAC filtering, pre-2015 re-screened alternatives, sleeve-budget learning, and cost-aware execution. Those experiments did **not establish a statistically reliable advantage** for a more complex alternative over the selected fixed **42-input, 30/20/20/30, full-rebalance** specification. Historical selection experiments used their own risk-target conventions; the **final results in this report are uniformly evaluated at 11% ex-ante volatility**. The selection process is documented in the [screening report](reports/research/IC_T_FILTER_REPORT.md) and [portfolio-design experiment](reports/research/ICT42_PORTFOLIO_OPTIMIZATION_REPORT.md).
+
+### 3.4 Rebalancing and implementation costs
+
+Every 21 business days, the selected strategy trades from its **price-drifted holdings** to the newly formed target weights. Positions drift between formations; the strategy does **not** reset weights each day. Transaction costs are charged at **2 basis points per unit of traded notional**, plus a rolling allowance equivalent to **four annual rolls at 2 basis points on held gross notional**. Financing, time-varying bid–ask spreads, market impact, and exact contract-level rolling mechanics are not modeled. Both the benchmark and enhanced portfolio are evaluated net of their modeled costs.
+
+## 4. Empirical results
+
+### 4.1 Net performance at matched reporting endpoints
+
+Annual net mean return is $12$ times the mean 21-business-day return; annualized volatility is $\sqrt{12}$ times its standard deviation. Net Sharpe uses a zero cash hurdle, and CAGR compounds reported period returns. Maximum drawdown in Table 1 is measured **only at the common 21-day endpoints**, ensuring that the reported drawdown definitions are comparable across strategies.
+
+**Table 1. Performance comparison, 11% ex-ante risk targets**
+
+| Period | Strategy | Annual net mean | CAGR | Annual volatility | Net Sharpe | Maximum endpoint drawdown |
 |---|---|---:|---:|---:|---:|---:|
-| 1976–2014 | Course baseline | **15.40%** | **15.64%** | 12.60% | 1.222 | **−18.24%** |
-| 1976–2014 | Selected four-sleeve, 11% target | **15.50%** | **15.82%** | **12.08%** | **1.283** | −23.31% |
-| 2015–May 2025 | Course baseline | 3.24% | 2.39% | 13.34% | 0.243 | −25.48% |
-| 2015–May 2025 | Selected four-sleeve, 11% target | **4.02%** | **3.44%** | **11.27%** | **0.356** | **−15.12%** |
+| **1976–2014** | Course TSMOM baseline | 15.40% | 15.64% | 12.60% | 1.222 | **−18.24%** |
+| **1976–2014** | Enhanced four-sleeve | **15.50%** | **15.82%** | **12.08%** | **1.283** | −23.31% |
+| **2015–May 2025** | Course TSMOM baseline | 3.24% | 2.39% | 13.34% | 0.243 | −25.48% |
+| **2015–May 2025** | Enhanced four-sleeve | **4.02%** | **3.44%** | **11.27%** | **0.356** | **−15.12%** |
 
-![Matched-period Sharpe comparison of course baseline and 11%-target four-sleeve strategy](outputs/selected42_target11/image2.png)
+![Net Sharpe comparison on matched 21-day endpoints](outputs/selected42_target11/image2.png)
 
-The selected strategy has a higher Sharpe in both periods and a smaller out-of-sample endpoint drawdown. Its 1976–2014 drawdown is **deeper** than the baseline's, so the risk benefit is not uniform across history. Daily marking gives the selected strategy a maximum drawdown of **−25.19%** in 1976–2014 and **−19.17%** in 2015–May 2025. A directly comparable daily drawdown for the baseline is unavailable in the saved comparison; the table uses common endpoints for both.
+In **1976–2014**, the enhanced strategy achieves a **0.061 higher net Sharpe** with similar annual net mean return and slightly lower realized volatility. Nevertheless, its maximum endpoint drawdown is **5.07 percentage points deeper** than the baseline's. This period therefore does **not** support a uniform claim of superior downside protection. Moreover, its aggregate performance includes the years before the Extra Trees sleeve was active; a separate **2005–2014** comparison would be needed to isolate the fully active allocation.
 
-![Historical drawdowns on the same 21-day endpoints](outputs/selected42_target11/image3.png)
+In **2015–May 2025**, the enhanced strategy earns **0.78 percentage points more annual net mean return**, shows **2.07 percentage points less realized volatility**, and records a **0.113 higher net Sharpe**. Its endpoint maximum drawdown improves by **10.36 percentage points**. These are economically relevant descriptive differences, but the enhanced strategy's Sharpe remains modest in absolute terms, and the out-of-sample period has influenced research decisions.
 
-![Out-of-sample drawdowns on the same 21-day endpoints](outputs/selected42_target11/image1.png)
+![Historical drawdown measured at matched reporting endpoints](outputs/selected42_target11/image3.png)
 
-These Sharpe differences are modest relative to sampling uncertainty. The in-sample summary also includes years before the Extra Trees sleeve was active. The out-of-sample comparison is descriptive because the team has examined that period while selecting model and portfolio alternatives.
+![2015–May 2025 drawdown measured at matched reporting endpoints](outputs/selected42_target11/image1.png)
 
-## 5. Exposure, turnover and transaction costs
+Daily marking of the enhanced strategy produces maximum drawdowns of **−25.19%** in 1976–2014 and **−19.17%** in 2015–May 2025. The corresponding daily baseline drawdowns are not available in the saved comparison, so these figures should **not** be compared directly with the endpoint baseline drawdowns in Table 1. No formal confidence intervals for Sharpe differences are supplied in the current report; the observed improvements should not be characterized as statistically established.
 
-**Transaction costs and turnover.** At each 21-business-day formation, turnover is the sum across instruments of the absolute change from the holdings after price drift to the new target weights: `Σ |target weight − drifted weight|`. A one-way trade of 1× portfolio NAV therefore contributes 1× turnover. The backtest charges **2 basis points per unit of turnover**, plus a roll allowance of **four rolls per year at 2 basis points each** on held gross notional. Annual cost is the annualized sum of trade and roll costs, expressed as a percentage of NAV; it is deducted from gross returns to obtain net returns. This simplified model excludes financing, variable bid–ask spreads and market impact.
+### 4.2 Exposure, turnover, and cost trade-offs
 
-**Exposure.** Gross exposure is `Σ |weight|`: total futures notional relative to NAV, counting longs and shorts positively. Net exposure is `Σ weight`: long notional minus short notional. We report the **absolute value of net exposure** before averaging so that long and short directional bets do not cancel. For example, 11× gross and 6× absolute net mean that substantial long and short notional is outstanding, with a large directional imbalance; they do not imply that 11× NAV was paid upfront. High notional exposure can nevertheless increase margin, financing and execution demands.
+Turnover is measured as the sum of absolute differences between target portfolio weights and drifted pretrade weights, $\sum_i|w^{target}_{i,t}-w^{drift}_{i,t}|$. Gross exposure is $\sum_i|w_{i,t}|$; absolute net exposure is $|\sum_i w_{i,t}|$. Both exposures are expressed relative to portfolio NAV. A large gross notional is not an equivalent upfront cash outlay, but it entails operational, margin, and financing considerations.
 
-| Period | Strategy | Annual turnover | Annual transaction cost | Average gross exposure | Average absolute net exposure |
+**Table 2. Turnover, modeled costs, and notional exposures**
+
+| Period | Strategy | Annual turnover | Annual transaction cost / NAV | Average gross exposure | Average absolute net exposure |
 |---|---|---:|---:|---:|---:|
-| 1976–2014 | Course baseline | 21.33× | 0.922% | 6.19× | 3.07× |
-| 1976–2014 | Selected four-sleeve, 11% target | 27.33× | 0.979% | 5.42× | 2.67× |
-| 2015–May 2025 | Course baseline | 43.47× | 1.793% | 11.54× | 6.08× |
-| 2015–May 2025 | Selected four-sleeve, 11% target | 53.80× | 2.073% | 12.44× | 7.25× |
+| **1976–2014** | Course TSMOM baseline | 21.33× | 0.922% | 6.19× | 3.07× |
+| **1976–2014** | Enhanced four-sleeve | 27.33× | 0.979% | 5.42× | 2.67× |
+| **2015–May 2025** | Course TSMOM baseline | 43.47× | 1.793% | 11.54× | 6.08× |
+| **2015–May 2025** | Enhanced four-sleeve | 53.80× | 2.073% | 12.44× | 7.25× |
 
-The baseline's exposure figures are averaged at its 21-day formation endpoints; the selected portfolio's figures are averaged across daily marked holdings. Their turnover and cost figures are annualized from their respective saved backtests. Baseline absolute net exposure was recalculated from [`periods_exante_11_sample_u58.csv`](outputs/baseline/periods_exante_11_sample_u58.csv), because its summary table reports the *signed* mean net exposure.
+In the out-of-sample period, the enhanced portfolio trades **10.33× NAV more annually** and incurs **0.280 percentage points more modeled cost** than the benchmark. It also has higher average gross and absolute net exposure. Because there are **no gross, net, or class exposure caps**, these large notional positions are part of the selected strategy rather than artifacts of an alternative constrained backtest.
 
-**Full rebalancing** means that, at every formation close, the selected portfolio trades the entire gap between its drifted current weights and its newly calculated target weights. It then holds those positions, allowing them to drift with prices, until the next formation; it does **not** reset targets every day. This keeps holdings aligned with current signals and the 11% predicted-volatility target at each decision date, but can generate more turnover than moving only partway toward the target. After 2015, the selected strategy trades **53.80× NAV per year**, versus **43.47×** for the baseline, and incurs higher modeled cost. Its average gross exposure is also higher (**12.44× versus 11.54×**), as is its average absolute net exposure (**7.25× versus 6.08×**). These large notionals are an important practical limitation of both strategies.
+**Measurement qualification:** Baseline exposure is averaged at its 21-day formation endpoints, whereas enhanced-strategy exposure is averaged over daily marked holdings. These statistics describe each saved backtest but are not perfectly time-aligned. A definitive exposure comparison would measure both strategies on the same dates. Annualized turnover and costs are drawn from the corresponding saved simulations.
 
-## 6. Why this configuration was selected
+## 5. Interpretation and robustness considerations
 
-The factor research tested an IC-only filter and an IC-plus-directional-HAC filter, with pre-2015 re-screened alternatives. The selected **fixed 42-input** list is a simpler specification, but the research did not establish a statistically reliable advantage over the other screened lists. Separate allocation and execution experiments did not support replacing the fixed **30/20/20/30**, full-rebalance design. Those selection experiments used their own historical risk-target convention; this report evaluates only the final 42-input portfolio at the course baseline's **11% target**. Because the out-of-sample interval was examined during model selection, the current comparison is descriptive rather than an untouched prospective test. Methodology and candidate results are documented in the [screening report](reports/research/IC_T_FILTER_REPORT.md) and [portfolio experiment](reports/research/ICT42_PORTFOLIO_OPTIMIZATION_REPORT.md).
+The equal **11% ex-ante volatility target** eliminates one major specification difference between the benchmark and enhanced portfolio. It does not guarantee equal **realized** volatility: risk forecasts, covariance structures, and portfolio compositions differ. Thus, the lower out-of-sample realized volatility and drawdown are meaningful observed outcomes, but they cannot yet be attributed to a particular sleeve, improved forecasting, or exposure management without a controlled attribution exercise.
 
-The selected portfolio has no gross, net or asset-class limits. The large exposures in Section 5 are therefore part of its actual backtest, not an artifact of a separate constrained variant.
+The four-sleeve construction also adds implementation complexity. Extra Trees undergoes historical feature screening, the skew and macro sleeves depend on additional signal assumptions, and a fully rebalanced portfolio trades more frequently. The fixed 42-input choice simplifies the model relative to larger screened alternatives, but its incremental value is not statistically established by the selection exercises. The 2015–2025 results should be read as **out-of-sample historical performance influenced by research decisions**, not an independent prospective test.
 
-## 7. Limitations and conclusion
+Two analyses would substantially strengthen the evidence if they can be produced using the existing code and stored data:
 
-Back-adjusted futures prices omit contract-selection and exact roll-date mechanics. The fixed 2-basis-point cost convention excludes financing and market impact, which may be material at the observed leverage. Sample covariance and the 11% ex-ante scale can misstate future risk when volatilities or correlations change. The 42-input screen tests many correlated features without a multiple-testing correction, and the out-of-sample period has been seen during research. These constraints limit any claim of generalizable out-of-sample improvement.
+1. **Fully active-period and sleeve ablations.** Present 2005–2014 alongside the 1976–2014 aggregate and compare price-only, price-plus-one-sleeve, and full four-sleeve portfolios under the same 11% risk and cost assumptions. This would clarify which signal families contribute to the measured gain. **No such attribution results are assumed or reported here.**
+2. **Matched-date risk and statistical uncertainty.** Recompute baseline and enhanced exposures on identical dates, and report confidence intervals for paired net-return differences and, where feasible, Sharpe differences using dependence-aware time-series methods. The current tables alone do not establish statistical significance.
 
-Within those limits, the selected 42-input four-sleeve strategy at the baseline's 11% ex-ante target has higher measured net Sharpe and a substantially smaller out-of-sample endpoint drawdown. Its higher turnover and exposure remain central trade-offs. The selected strategy has **no turning-point overlay**.
+## 6. Limitations
 
-## Reproduction
+Several limitations restrict the interpretation of the backtest. **First**, back-adjusted prices do not reproduce contract selection, precise rolling schedules, or contract-level implementation. **Second**, the fixed transaction-cost convention omits financing, variable spreads, and market impact; these costs may be material given average gross exposure above 12× NAV for the selected strategy in the out-of-sample period. **Third**, a trailing sample covariance and ex-ante risk target cannot guarantee future realized volatility, particularly during market stress. **Fourth**, selection from multiple correlated Extra Trees features was not corrected for multiple hypothesis testing. **Finally**, the out-of-sample period was repeatedly examined during project development, introducing research-selection bias.
 
-From the repository root, install [`requirements.txt`](requirements.txt), then run `python run.py baseline` and `python run.py selected-42`. The latter uses the saved chronological 42-input probabilities in [`outputs/ic_t_feature_filter/`](outputs/ic_t_feature_filter/). To regenerate the screening and frozen forecasts first, run `python run.py factor-ic`, `python run.py ic-filter`, `python run.py ic-filter-oos`, and `python run.py ic-t-filter` in that order, then `python run.py selected-42`. The selected 11%-target results, aligned returns, daily returns and figures are in [`outputs/selected42_target11/`](outputs/selected42_target11/). `python run_final_strategy.py` reconstructs the **original 66-input comparison**, not the selected portfolio.
+These issues do not negate the reported historical results, but they prevent a strong claim that the enhanced portfolio will outperform prospectively.
+
+## 7. Conclusion
+
+The selected 42-input, four-sleeve futures portfolio delivers **higher measured net Sharpe in both reported periods** than the course TSMOM benchmark when both target **11% ex-ante volatility**. In the out-of-sample historical interval, it also earns a higher annual net return and experiences a substantially smaller maximum drawdown at matched reporting endpoints. However, the historical maximum drawdown is worse, the out-of-sample Sharpe remains moderate, and higher turnover and notional exposures create practical costs and risk. Because performance attribution and formal statistical uncertainty are not established here, the evidence supports a **promising but provisional diversification-of-signals result**, rather than a proven incremental premium from any specific sleeve.
+
+The selected portfolio **does not include a turning-point overlay**; that research is separate from the final four-sleeve strategy described here.
+
+## Appendix A. Reproduction and research artifacts
+
+From the repository root, install [`requirements.txt`](requirements.txt), then run:
+
+```bash
+python run.py baseline
+python run.py selected-42
+```
+
+The selected 11%-target tables, aligned returns, daily results, and figures are saved under [`outputs/selected42_target11/`](outputs/selected42_target11/). The enhanced simulation uses saved chronological 42-input forecasts from [`outputs/ic_t_feature_filter/`](outputs/ic_t_feature_filter/).
+
+To regenerate the screening and frozen model forecasts first, run:
+
+```bash
+python run.py factor-ic
+python run.py ic-filter
+python run.py ic-filter-oos
+python run.py ic-t-filter
+python run.py selected-42
+```
+
+The final selected portfolio is constructed in [`orie5260/presentation/prepare_results.py`](orie5260/presentation/prepare_results.py). The command `python run_final_strategy.py` reconstructs the **original 66-input comparison**, not the selected 42-input portfolio.
+
+Further methodological detail is available in the [screening report](reports/research/IC_T_FILTER_REPORT.md) and [portfolio-design experiment](reports/research/ICT42_PORTFOLIO_OPTIMIZATION_REPORT.md).
