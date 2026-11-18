@@ -1,8 +1,8 @@
 # ORIE 5260: Daily Futures Trend Portfolio
 
-This repository compares a course **daily time-series momentum baseline** with a four-sleeve futures portfolio across 58 markets. The selected portfolio combines price trend (30% signal budget), economic trend (20%), negative skew (20%) and a fixed **42-input Extra Trees** signal (30%). It targets 10% ex-ante annual volatility using daily covariance and fully rebalances every 21 business days. It has no gross or net exposure caps and does not use cost-aware execution. The main [academic report](report.md) explains the construction, results and limitations.
+This repository compares a course **daily time-series momentum baseline** with a four-sleeve futures portfolio across 58 markets. The selected portfolio combines price trend (30% signal budget), economic trend (20%), negative skew (20%) and a fixed **42-input Extra Trees** signal (30%). It now targets **11% ex-ante annual volatility**, matching the course baseline, and fully rebalances every 21 business days. It has no gross or net exposure caps and does not use cost-aware execution. The main [academic report](report.md) explains the construction, results and limitations.
 
-On matched 21-day endpoints, selected-portfolio net Sharpe is **1.283** in 1976–2014 and **0.357** in January 2015–May 2025; the course baseline is **1.222** and **0.243**, respectively. The later interval has been examined during research and is not an untouched holdout.
+On matched 21-day endpoints, selected-portfolio net Sharpe is **1.283** in 1976–2014 and **0.356** in the January 2015–May 2025 out-of-sample period; the course baseline is **1.222** and **0.243**, respectively. The out-of-sample period has been examined during research and is not an untouched holdout.
 
 ## Start here
 
@@ -44,13 +44,13 @@ Use `python run.py <command> --dry-run` to see a command's module and required s
 | `run.py`, `orie5260/cli.py` | Command-line entry points for reproducible runs. |
 | `outputs/baseline/` | Course baseline returns and robustness variants. |
 | `outputs/ic_t_feature_filter/` | Frozen 42-input list, models, probabilities and screening comparisons. |
-| `outputs/ppt42_update/` | **Main selected-portfolio results**, aligned returns, daily returns, risk diagnostics and figures. |
+| `outputs/selected42_target11/` | **Current 11%-target selected-portfolio results**, aligned returns, daily returns and figures. |
 | `reports/research/` | Research reports for candidate signals, screens and portfolio alternatives, including rejected variants. |
-| `ppt/` | Current presentation and update notes. |
+| `ppt/` | Presentation materials from an earlier reporting pass; use this README, report and selected-result folder for current figures. |
 | `tests/` | Timing, accounting, model-selection and module tests. |
 | `archive/` | Original flat-layout source and presentation-authoring snapshots. |
 | `docs/MODULE_MAP.md` | Mapping from old flat script names to the current modules and commands. |
 
 The current selected strategy uses the **same frozen 42-input list** when Extra Trees is refitted before 2015; before 2005, its unavailable ML budget falls back to price trend. The 42-input screen required training-period absolute mean rank IC ≥ 0.01 and a directionally consistent six-lag HAC |t| ≥ 1.96. The selected portfolio uses 2 basis points per unit traded plus a simple roll allowance. See [report.md](report.md) for methodology and [the research index](reports/research/README.md) for alternative designs.
 
-An optional [turning-point analysis](turning_point_analysis.md) tests a slow–fast trend overlay against the selected 42-input portfolio. It is **not** part of the selected strategy.
+The selected strategy has no turning-point overlay. Research variants are documented separately in [`reports/research/`](reports/research/).
