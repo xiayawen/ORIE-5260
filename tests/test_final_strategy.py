@@ -4,10 +4,10 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from costs_and_execution import mark_daily
-from daily_baseline import construct_signal
-from portfolio_engine import constrain, risk_normalize
-from risk_model import LIMITS
+from orie5260.execution.costs_and_execution import mark_daily
+from orie5260.backtests.daily_baseline import construct_signal
+from orie5260.portfolio.engine import constrain, risk_normalize
+from orie5260.portfolio.risk_model import LIMITS
 
 
 class FinalStrategyTests(unittest.TestCase):

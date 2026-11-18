@@ -1,0 +1,21 @@
+feature,mean_train_rank_ic,hac_t6,direction,months,keep,passed_ic,passed_t,reason,validation_signed_ic
+TSMOM,0.0758320773176751,6.216557157532719,1.0,347,True,True,True,passed IC and optional direction t rule,0.037131757153003084
+Reversal_1m,-0.0479892560269339,-3.3750238216157276,-1.0,346,True,True,True,passed IC and optional direction t rule,0.00623861251383663
+LowVol_12m,0.0309108750194964,2.0198755580390015,1.0,347,True,True,True,passed IC and optional direction t rule,-0.013232505653939854
+LowDownside_12m,0.0703847976170393,4.641393452137877,1.0,347,True,True,True,passed IC and optional direction t rule,0.0010374570171015325
+XSMOM_12_1,0.0747666972742216,4.83366607815178,1.0,346,True,True,True,passed IC and optional direction t rule,0.03437058382619151
+Reversal_3m,-0.0455787609946824,-3.388696882087073,-1.0,347,True,True,True,passed IC and optional direction t rule,0.03497524252600845
+MildWorstReturn_12m,0.0638875264252753,4.254972678104309,1.0,347,True,True,True,passed IC and optional direction t rule,-0.005434168507148219
+LowTailLoss_12m,0.0683233261042332,4.865031468633846,1.0,347,True,True,True,passed IC and optional direction t rule,0.0022354005448995884
+RiskAsymmetry_12m,0.074739731193005,4.876868255230386,1.0,347,True,True,True,passed IC and optional direction t rule,0.0318099958299124
+TrendEfficiency_12m,0.0866715608433065,6.355223238658969,1.0,347,True,True,True,passed IC and optional direction t rule,0.04397278685292031
+MeanToVol_12m,0.0858903095745461,6.237343367679253,1.0,347,True,True,True,passed IC and optional direction t rule,0.045122089419435386
+NearWealthHigh_12m,0.0960747559899576,6.0271094512009515,1.0,347,True,True,True,passed IC and optional direction t rule,0.024757624546966416
+ShallowDrawdown_12m,0.0754585560970684,4.895517078818616,1.0,347,True,True,True,passed IC and optional direction t rule,0.003312220591958254
+PositiveMonthShare_12m,0.0712894690122486,6.156413279583632,1.0,347,True,True,True,passed IC and optional direction t rule,0.047422337538185214
+MedianReturn_12m,0.0744469752403166,5.942844871092779,1.0,347,True,True,True,passed IC and optional direction t rule,0.0431490587813872
+LowPeerBeta_36m,0.0405705353827178,2.5407979351897163,1.0,347,True,True,True,passed IC and optional direction t rule,-0.028860236342877387
+LowResidualVol_12m,0.0329681549306617,2.101511770085076,1.0,347,True,True,True,passed IC and optional direction t rule,0.0041886998308918975
+ResidualMomentum_12m,0.0774789393972636,5.649040471198224,1.0,347,True,True,True,passed IC and optional direction t rule,0.035773368582154824
+PeerRelativeReversal_1m,-0.0421454457536658,-3.156023885086713,-1.0,347,True,True,True,passed IC and optional direction t rule,-0.01096479987239986
+PeerRelativeMomentum_12m,0.0780238675452815,5.552036972644983,1.0,347,True,True,True,passed IC and optional direction t rule,0.03300648535928249

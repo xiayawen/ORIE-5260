@@ -1,0 +1,14 @@
+{
+  "Rescreen55": {
+    "last_training_label": "2014-11-28",
+    "training_rows": 20059,
+    "training_label_start": "1970-02-27",
+    "feature_count": 55
+  },
+  "FixedInputs56": {
+    "last_training_label": "2014-11-28",
+    "training_rows": 20059,
+    "training_label_start": "1970-02-27",
+    "feature_count": 56
+  }
+}

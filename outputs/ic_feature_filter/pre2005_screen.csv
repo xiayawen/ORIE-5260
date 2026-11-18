@@ -1,0 +1,67 @@
+feature,mean_train_rank_ic,months,keep,reason
+TSMOM,0.07583207731767516,347,True,absolute IC >= threshold
+Reversal_1m,-0.04798925602693393,346,True,absolute IC >= threshold
+LowVol_12m,0.030910875019496444,347,True,absolute IC >= threshold
+LowDownside_12m,0.07038479761703936,347,True,absolute IC >= threshold
+XSMOM_12_1,0.07476669727422168,346,True,absolute IC >= threshold
+Reversal_3m,-0.045578760994682485,347,True,absolute IC >= threshold
+LongReversal_36_12,0.01732780465732429,346,True,absolute IC >= threshold
+NegativeSkew_12m,0.01168254111938498,347,True,absolute IC >= threshold
+LowKurtosis_12m,-0.005558732904872015,347,False,absolute IC < threshold or undefined
+LowMaxReturn_12m,8.973021127018403e-05,347,False,absolute IC < threshold or undefined
+MildWorstReturn_12m,0.0638875264252753,347,True,absolute IC >= threshold
+LowTailLoss_12m,0.06832332610423322,347,True,absolute IC >= threshold
+LowUpsideRisk_12m,-0.008730502680071028,347,False,absolute IC < threshold or undefined
+RiskAsymmetry_12m,0.07473973119300509,347,True,absolute IC >= threshold
+VolCompression_3_12,0.00018215152282563188,347,False,absolute IC < threshold or undefined
+LowVolOfVol_12m,-0.010726284981605601,347,True,absolute IC >= threshold
+ReturnPersistence_12m,0.0160271488960148,347,True,absolute IC >= threshold
+Seasonality_5y,0.01827206282610001,322,True,absolute IC >= threshold
+TrendEfficiency_12m,0.08667156084330652,347,True,absolute IC >= threshold
+TrendAcceleration_3m,0.003085163854575439,347,False,absolute IC < threshold or undefined
+MeanToVol_12m,0.08589030957454612,347,True,absolute IC >= threshold
+NearWealthHigh_12m,0.09607475598995764,347,True,absolute IC >= threshold
+ShallowDrawdown_12m,0.07545855609706842,347,True,absolute IC >= threshold
+PositiveMonthShare_12m,0.07128946901224864,347,True,absolute IC >= threshold
+MedianReturn_12m,0.0744469752403166,347,True,absolute IC >= threshold
+LowPeerBeta_36m,0.040570535382717855,347,True,absolute IC >= threshold
+LowPeerCorrelation_36m,0.011812678993981508,347,True,absolute IC >= threshold
+LowResidualVol_12m,0.03296815493066171,347,True,absolute IC >= threshold
+ResidualMomentum_12m,0.0774789393972636,347,True,absolute IC >= threshold
+PeerRelativeReversal_1m,-0.04214544575366589,347,True,absolute IC >= threshold
+PeerRelativeMomentum_12m,0.07802386754528155,347,True,absolute IC >= threshold
+rank_TSMOM,0.07360831079234137,347,True,absolute IC >= threshold
+rank_Reversal_1m,-0.023479515163953846,346,True,absolute IC >= threshold
+rank_LowVol_12m,0.018257781960065195,347,True,absolute IC >= threshold
+rank_LowDownside_12m,0.057528874113388265,347,True,absolute IC >= threshold
+rank_XSMOM_12_1,0.07898954162841612,346,True,absolute IC >= threshold
+rank_Reversal_3m,-0.031575105524344255,347,True,absolute IC >= threshold
+rank_LongReversal_36_12,0.023173473774183728,346,True,absolute IC >= threshold
+rank_NegativeSkew_12m,0.011845287924660575,347,True,absolute IC >= threshold
+rank_LowKurtosis_12m,0.0013800985638666773,347,False,absolute IC < threshold or undefined
+rank_LowMaxReturn_12m,-0.007698497637496083,347,False,absolute IC < threshold or undefined
+rank_MildWorstReturn_12m,0.04882320558836036,347,True,absolute IC >= threshold
+rank_LowTailLoss_12m,0.05678136302136333,347,True,absolute IC >= threshold
+rank_LowUpsideRisk_12m,-0.012997622886947526,347,True,absolute IC >= threshold
+rank_RiskAsymmetry_12m,0.0639415144298666,347,True,absolute IC >= threshold
+rank_VolCompression_3_12,0.0041909212886826735,347,False,absolute IC < threshold or undefined
+rank_LowVolOfVol_12m,0.0002992833890399392,347,False,absolute IC < threshold or undefined
+rank_ReturnPersistence_12m,0.01936825600958197,347,True,absolute IC >= threshold
+rank_Seasonality_5y,0.024946809216749098,322,True,absolute IC >= threshold
+rank_TrendEfficiency_12m,0.07823848582996118,347,True,absolute IC >= threshold
+rank_TrendAcceleration_3m,0.003633989243527318,347,False,absolute IC < threshold or undefined
+rank_MeanToVol_12m,0.07716471902746819,347,True,absolute IC >= threshold
+rank_NearWealthHigh_12m,0.08219841591226205,347,True,absolute IC >= threshold
+rank_ShallowDrawdown_12m,0.06377765899237742,347,True,absolute IC >= threshold
+rank_PositiveMonthShare_12m,0.062300061008738535,347,True,absolute IC >= threshold
+rank_MedianReturn_12m,0.06733009221062743,347,True,absolute IC >= threshold
+rank_LowPeerBeta_36m,0.05219478453344957,347,True,absolute IC >= threshold
+rank_LowPeerCorrelation_36m,0.03966224443355092,347,True,absolute IC >= threshold
+rank_LowResidualVol_12m,0.01483725460427768,347,True,absolute IC >= threshold
+rank_ResidualMomentum_12m,0.07486816932090397,347,True,absolute IC >= threshold
+rank_PeerRelativeReversal_1m,-0.03757924080335464,347,True,absolute IC >= threshold
+rank_PeerRelativeMomentum_12m,0.07713302179039605,347,True,absolute IC >= threshold
+class_COMM,,0,True,"class control, not alpha"
+class_EQ,,0,True,"class control, not alpha"
+class_FI,,0,True,"class control, not alpha"
+class_FX,,0,True,"class control, not alpha"

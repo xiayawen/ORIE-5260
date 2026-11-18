@@ -1,0 +1,117 @@
+{
+  "data_utils.py": {
+    "module": "orie5260.common.data",
+    "path": "orie5260/common/data.py",
+    "archived": "archive/flat_layout_before_modularization/data_utils.py"
+  },
+  "price_trend.py": {
+    "module": "orie5260.signals.price_trend",
+    "path": "orie5260/signals/price_trend.py",
+    "archived": "archive/flat_layout_before_modularization/price_trend.py"
+  },
+  "macro_trend.py": {
+    "module": "orie5260.signals.macro_trend",
+    "path": "orie5260/signals/macro_trend.py",
+    "archived": "archive/flat_layout_before_modularization/macro_trend.py"
+  },
+  "negative_skew.py": {
+    "module": "orie5260.signals.negative_skew",
+    "path": "orie5260/signals/negative_skew.py",
+    "archived": "archive/flat_layout_before_modularization/negative_skew.py"
+  },
+  "extra_trees.py": {
+    "module": "orie5260.models.extra_trees",
+    "path": "orie5260/models/extra_trees.py",
+    "archived": "archive/flat_layout_before_modularization/extra_trees.py"
+  },
+  "ic_feature_filter.py": {
+    "module": "orie5260.models.ic_feature_filter",
+    "path": "orie5260/models/ic_feature_filter.py",
+    "archived": "archive/flat_layout_before_modularization/ic_feature_filter.py"
+  },
+  "portfolio_engine.py": {
+    "module": "orie5260.portfolio.engine",
+    "path": "orie5260/portfolio/engine.py",
+    "archived": "archive/flat_layout_before_modularization/portfolio_engine.py"
+  },
+  "risk_model.py": {
+    "module": "orie5260.portfolio.risk_model",
+    "path": "orie5260/portfolio/risk_model.py",
+    "archived": "archive/flat_layout_before_modularization/risk_model.py"
+  },
+  "sleeve_allocation.py": {
+    "module": "orie5260.portfolio.allocation",
+    "path": "orie5260/portfolio/allocation.py",
+    "archived": "archive/flat_layout_before_modularization/sleeve_allocation.py"
+  },
+  "costs_and_execution.py": {
+    "module": "orie5260.execution.costs_and_execution",
+    "path": "orie5260/execution/costs_and_execution.py",
+    "archived": "archive/flat_layout_before_modularization/costs_and_execution.py"
+  },
+  "daily_baseline.py": {
+    "module": "orie5260.backtests.daily_baseline",
+    "path": "orie5260/backtests/daily_baseline.py",
+    "archived": "archive/flat_layout_before_modularization/daily_baseline.py"
+  },
+  "run_final_strategy.py": {
+    "module": "orie5260.backtests.final_strategy",
+    "path": "orie5260/backtests/final_strategy.py",
+    "archived": "archive/flat_layout_before_modularization/run_final_strategy.py"
+  },
+  "compare_baseline.py": {
+    "module": "orie5260.backtests.compare_baseline",
+    "path": "orie5260/backtests/compare_baseline.py",
+    "archived": "archive/flat_layout_before_modularization/compare_baseline.py"
+  },
+  "decompose_steps.py": {
+    "module": "orie5260.backtests.decompose_steps",
+    "path": "orie5260/backtests/decompose_steps.py",
+    "archived": "archive/flat_layout_before_modularization/decompose_steps.py"
+  },
+  "exposure_sensitivity.py": {
+    "module": "orie5260.backtests.exposure_sensitivity",
+    "path": "orie5260/backtests/exposure_sensitivity.py",
+    "archived": "archive/flat_layout_before_modularization/exposure_sensitivity.py"
+  },
+  "factor_ic_analysis.py": {
+    "module": "orie5260.research.factors.factor_ic_analysis",
+    "path": "orie5260/research/factors/factor_ic_analysis.py",
+    "archived": "archive/flat_layout_before_modularization/factor_ic_analysis.py"
+  },
+  "backtest_ic_filter.py": {
+    "module": "orie5260.research.factors.backtest_ic_filter",
+    "path": "orie5260/research/factors/backtest_ic_filter.py",
+    "archived": "archive/flat_layout_before_modularization/backtest_ic_filter.py"
+  },
+  "evaluate_ic_filter_oos.py": {
+    "module": "orie5260.research.factors.evaluate_ic_filter_oos",
+    "path": "orie5260/research/factors/evaluate_ic_filter_oos.py",
+    "archived": "archive/flat_layout_before_modularization/evaluate_ic_filter_oos.py"
+  },
+  "backtest_ic_t_filter.py": {
+    "module": "orie5260.research.factors.backtest_ic_t_filter",
+    "path": "orie5260/research/factors/backtest_ic_t_filter.py",
+    "archived": "archive/flat_layout_before_modularization/backtest_ic_t_filter.py"
+  },
+  "optimize_daily_budgets.py": {
+    "module": "orie5260.research.allocation.optimize_daily_budgets",
+    "path": "orie5260/research/allocation/optimize_daily_budgets.py",
+    "archived": "archive/flat_layout_before_modularization/optimize_daily_budgets.py"
+  },
+  "optimize_ict42_portfolio.py": {
+    "module": "orie5260.research.allocation.optimize_ict42_portfolio",
+    "path": "orie5260/research/allocation/optimize_ict42_portfolio.py",
+    "archived": "archive/flat_layout_before_modularization/optimize_ict42_portfolio.py"
+  },
+  "prepare_ppt42_results.py": {
+    "module": "orie5260.presentation.prepare_results",
+    "path": "orie5260/presentation/prepare_results.py",
+    "archived": "archive/flat_layout_before_modularization/prepare_ppt42_results.py"
+  },
+  "presentation_factor_model_evidence.py": {
+    "module": "orie5260.presentation.model_evidence",
+    "path": "orie5260/presentation/model_evidence.py",
+    "archived": "archive/flat_layout_before_modularization/presentation_factor_model_evidence.py"
+  }
+}

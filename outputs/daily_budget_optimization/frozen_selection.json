@@ -1,0 +1,163 @@
+{
+  "optimized_family_candidate": "Risk2_Cost1",
+  "validation_winner": "Fixed",
+  "final_optimized_allocation": [
+    0.3999203382814268,
+    0.11668604687232657,
+    0.18339361484624675,
+    0.3
+  ],
+  "fixed_allocation": [
+    0.3,
+    0.2,
+    0.2,
+    0.3
+  ],
+  "training": "2005\u20132009; validation complete periods formed after2009 and ending byNov2014; final refit Jan2005\u2013Nov2014",
+  "bounds": "trend30\u2013100%; macro/factor/ML each0\u201330%; all nonnegative; sum1",
+  "objective": "0.5*annual daily gross mean - risk_aversion/2*annual daily gross variance - cost_aversion*exact annual gross-minus-net cost drag - .01*sum((a-fixed)^2)",
+  "risk_note": "Final book remains at10% ex-ante risk. Forecast variance is constant after scaling; risk penalty therefore uses realized TRAINING variance, not that constant.",
+  "unchanged": "ET66 signals, 252-day covariance, 10% ex-ante target, 21-day full rebalances, no exposure caps, 2bps costs plus4annual rolls",
+  "fits": {
+    "Risk2_Cost1": {
+      "allocation": [
+        0.4559435044781662,
+        0.2440564955218339,
+        0.0,
+        0.3
+      ],
+      "audit": {
+        "risk_aversion": 2.0,
+        "cost_aversion": 1.0,
+        "training_utility": 0.02944450841869105,
+        "fixed_utility": 0.023006825711945615,
+        "solver_success": true,
+        "solver_message": "Optimization terminated successfully",
+        "mean_shrinkage": 0.5,
+        "regularization": 0.01,
+        "training_start": "2005-01-01",
+        "training_last_observation": "2009-12-31",
+        "daily_training_rows": 1292
+      }
+    },
+    "Risk2_Cost3": {
+      "allocation": [
+        0.4425479814924951,
+        0.2548978388779302,
+        0.0025541796295748386,
+        0.3
+      ],
+      "audit": {
+        "risk_aversion": 2.0,
+        "cost_aversion": 3.0,
+        "training_utility": 0.013360069934501504,
+        "fixed_utility": 0.0021777307643130878,
+        "solver_success": true,
+        "solver_message": "Optimization terminated successfully",
+        "mean_shrinkage": 0.5,
+        "regularization": 0.01,
+        "training_start": "2005-01-01",
+        "training_last_observation": "2009-12-31",
+        "daily_training_rows": 1292
+      }
+    },
+    "Risk2_Cost10": {
+      "allocation": [
+        0.3919427407523736,
+        0.29999999999999977,
+        0.008057259247626571,
+        0.29999999999999993
+      ],
+      "audit": {
+        "risk_aversion": 2.0,
+        "cost_aversion": 10.0,
+        "training_utility": -0.04268204716750384,
+        "fixed_utility": -0.07072410155240078,
+        "solver_success": true,
+        "solver_message": "Optimization terminated successfully",
+        "mean_shrinkage": 0.5,
+        "regularization": 0.01,
+        "training_start": "2005-01-01",
+        "training_last_observation": "2009-12-31",
+        "daily_training_rows": 1292
+      }
+    },
+    "Risk8_Cost1": {
+      "allocation": [
+        0.39431454953354655,
+        0.3,
+        0.00568545046645356,
+        0.3
+      ],
+      "audit": {
+        "risk_aversion": 8.0,
+        "cost_aversion": 1.0,
+        "training_utility": -0.008110784921631772,
+        "fixed_utility": -0.013794549553251474,
+        "solver_success": true,
+        "solver_message": "Optimization terminated successfully",
+        "mean_shrinkage": 0.5,
+        "regularization": 0.01,
+        "training_start": "2005-01-01",
+        "training_last_observation": "2009-12-31",
+        "daily_training_rows": 1292
+      }
+    },
+    "Risk8_Cost3": {
+      "allocation": [
+        0.39065308344482036,
+        0.3,
+        0.009346916555179564,
+        0.3
+      ],
+      "audit": {
+        "risk_aversion": 8.0,
+        "cost_aversion": 3.0,
+        "training_utility": -0.0240991392888607,
+        "fixed_utility": -0.034623644500884,
+        "solver_success": true,
+        "solver_message": "Optimization terminated successfully",
+        "mean_shrinkage": 0.5,
+        "regularization": 0.01,
+        "training_start": "2005-01-01",
+        "training_last_observation": "2009-12-31",
+        "daily_training_rows": 1292
+      }
+    },
+    "Risk8_Cost10": {
+      "allocation": [
+        0.3906530638836998,
+        0.29999999998121846,
+        0.009346936135081111,
+        0.29999999999999993
+      ],
+      "audit": {
+        "risk_aversion": 8.0,
+        "cost_aversion": 10.0,
+        "training_utility": -0.08005235363878357,
+        "fixed_utility": -0.10752547681759786,
+        "solver_success": true,
+        "solver_message": "Optimization terminated successfully",
+        "mean_shrinkage": 0.5,
+        "regularization": 0.01,
+        "training_start": "2005-01-01",
+        "training_last_observation": "2009-12-31",
+        "daily_training_rows": 1292
+      }
+    }
+  },
+  "final_refit": {
+    "risk_aversion": 2.0,
+    "cost_aversion": 1.0,
+    "training_utility": 0.0356377470687429,
+    "fixed_utility": 0.034727914752493365,
+    "solver_success": true,
+    "solver_message": "Optimization terminated successfully",
+    "mean_shrinkage": 0.5,
+    "regularization": 0.01,
+    "training_start": "2005-01-01",
+    "training_last_observation": "2014-11-28",
+    "daily_training_rows": 2565
+  },
+  "warning": "Post2014 repeatedly inspected in earlier research; no new untouched OOS claim. Report optimized-family result even if Fixed wins validation."
+}

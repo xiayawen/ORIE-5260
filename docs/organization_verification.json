@@ -1,0 +1,482 @@
+{
+  "modules": 23,
+  "unchanged_function_or_class_bodies": 79,
+  "archive_files_verified": 35,
+  "definitions": [
+    {
+      "original": "data_utils.py",
+      "name": "monthly_returns",
+      "actual_module": "orie5260.common.data",
+      "body_preserved": true
+    },
+    {
+      "original": "data_utils.py",
+      "name": "asset_map",
+      "actual_module": "orie5260.common.data",
+      "body_preserved": true
+    },
+    {
+      "original": "data_utils.py",
+      "name": "daily_returns",
+      "actual_module": "orie5260.common.data",
+      "body_preserved": true
+    },
+    {
+      "original": "data_utils.py",
+      "name": "rebalance_dates",
+      "actual_module": "orie5260.common.data",
+      "body_preserved": true
+    },
+    {
+      "original": "data_utils.py",
+      "name": "period_returns",
+      "actual_module": "orie5260.common.data",
+      "body_preserved": true
+    },
+    {
+      "original": "price_trend.py",
+      "name": "daily_signal_and_vol",
+      "actual_module": "orie5260.signals.price_trend",
+      "body_preserved": true
+    },
+    {
+      "original": "price_trend.py",
+      "name": "trend_sleeve",
+      "actual_module": "orie5260.signals.price_trend",
+      "body_preserved": true
+    },
+    {
+      "original": "macro_trend.py",
+      "name": "fred",
+      "actual_module": "orie5260.signals.macro_trend",
+      "body_preserved": true
+    },
+    {
+      "original": "macro_trend.py",
+      "name": "themes",
+      "actual_module": "orie5260.signals.macro_trend",
+      "body_preserved": true
+    },
+    {
+      "original": "macro_trend.py",
+      "name": "macro_sleeve",
+      "actual_module": "orie5260.signals.macro_trend",
+      "body_preserved": true
+    },
+    {
+      "original": "negative_skew.py",
+      "name": "skew_sleeve",
+      "actual_module": "orie5260.signals.negative_skew",
+      "body_preserved": true
+    },
+    {
+      "original": "extra_trees.py",
+      "name": "price_features",
+      "actual_module": "orie5260.factors.features",
+      "body_preserved": true
+    },
+    {
+      "original": "extra_trees.py",
+      "name": "peer_features",
+      "actual_module": "orie5260.factors.features",
+      "body_preserved": true
+    },
+    {
+      "original": "extra_trees.py",
+      "name": "forecasts",
+      "actual_module": "orie5260.models.extra_trees",
+      "body_preserved": true
+    },
+    {
+      "original": "extra_trees.py",
+      "name": "extra_trees_sleeve",
+      "actual_module": "orie5260.models.extra_trees",
+      "body_preserved": true
+    },
+    {
+      "original": "ic_feature_filter.py",
+      "name": "feature_frames",
+      "actual_module": "orie5260.factors.selection",
+      "body_preserved": true
+    },
+    {
+      "original": "ic_feature_filter.py",
+      "name": "select_inputs",
+      "actual_module": "orie5260.factors.selection",
+      "body_preserved": true
+    },
+    {
+      "original": "ic_feature_filter.py",
+      "name": "panel",
+      "actual_module": "orie5260.factors.selection",
+      "body_preserved": true
+    },
+    {
+      "original": "ic_feature_filter.py",
+      "name": "fit_model",
+      "actual_module": "orie5260.models.training",
+      "body_preserved": true
+    },
+    {
+      "original": "portfolio_engine.py",
+      "name": "Limits",
+      "actual_module": "orie5260.portfolio.engine",
+      "body_preserved": true
+    },
+    {
+      "original": "portfolio_engine.py",
+      "name": "risk_normalize",
+      "actual_module": "orie5260.portfolio.engine",
+      "body_preserved": true
+    },
+    {
+      "original": "portfolio_engine.py",
+      "name": "constrain",
+      "actual_module": "orie5260.portfolio.engine",
+      "body_preserved": true
+    },
+    {
+      "original": "portfolio_engine.py",
+      "name": "blended_target",
+      "actual_module": "orie5260.portfolio.engine",
+      "body_preserved": true
+    },
+    {
+      "original": "portfolio_engine.py",
+      "name": "rebalance_metrics",
+      "actual_module": "orie5260.execution.accounting",
+      "body_preserved": true
+    },
+    {
+      "original": "portfolio_engine.py",
+      "name": "optimal_trade_fraction",
+      "actual_module": "orie5260.execution.optimizer",
+      "body_preserved": true
+    },
+    {
+      "original": "portfolio_engine.py",
+      "name": "cost_aware_path",
+      "actual_module": "orie5260.execution.optimizer",
+      "body_preserved": true
+    },
+    {
+      "original": "risk_model.py",
+      "name": "monthly_ewma_vol",
+      "actual_module": "orie5260.portfolio.risk_model",
+      "body_preserved": true
+    },
+    {
+      "original": "risk_model.py",
+      "name": "monthly_sample_cov",
+      "actual_module": "orie5260.portfolio.risk_model",
+      "body_preserved": true
+    },
+    {
+      "original": "risk_model.py",
+      "name": "monthly_covariance_cube",
+      "actual_module": "orie5260.portfolio.risk_model",
+      "body_preserved": true
+    },
+    {
+      "original": "risk_model.py",
+      "name": "daily_covariance_cube",
+      "actual_module": "orie5260.portfolio.risk_model",
+      "body_preserved": true
+    },
+    {
+      "original": "risk_model.py",
+      "name": "normalize_sleeve",
+      "actual_module": "orie5260.portfolio.risk_model",
+      "body_preserved": true
+    },
+    {
+      "original": "sleeve_allocation.py",
+      "name": "DailyAllocationEngine",
+      "actual_module": "orie5260.portfolio.allocation",
+      "body_preserved": true
+    },
+    {
+      "original": "sleeve_allocation.py",
+      "name": "allocation_utility",
+      "actual_module": "orie5260.portfolio.allocation",
+      "body_preserved": true
+    },
+    {
+      "original": "sleeve_allocation.py",
+      "name": "fit_budgets",
+      "actual_module": "orie5260.portfolio.allocation",
+      "body_preserved": true
+    },
+    {
+      "original": "costs_and_execution.py",
+      "name": "execute",
+      "actual_module": "orie5260.execution.costs_and_execution",
+      "body_preserved": true
+    },
+    {
+      "original": "costs_and_execution.py",
+      "name": "mark_daily",
+      "actual_module": "orie5260.execution.costs_and_execution",
+      "body_preserved": true
+    },
+    {
+      "original": "daily_baseline.py",
+      "name": "read_daily_returns",
+      "actual_module": "orie5260.backtests.daily_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "daily_baseline.py",
+      "name": "read_full_sample_returns",
+      "actual_module": "orie5260.backtests.daily_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "daily_baseline.py",
+      "name": "rebalance_dates",
+      "actual_module": "orie5260.backtests.daily_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "daily_baseline.py",
+      "name": "construct_signal",
+      "actual_module": "orie5260.backtests.daily_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "daily_baseline.py",
+      "name": "raw_weights",
+      "actual_module": "orie5260.backtests.daily_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "daily_baseline.py",
+      "name": "forecast_vol",
+      "actual_module": "orie5260.backtests.daily_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "daily_baseline.py",
+      "name": "period_returns",
+      "actual_module": "orie5260.backtests.daily_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "daily_baseline.py",
+      "name": "evaluate",
+      "actual_module": "orie5260.backtests.daily_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "daily_baseline.py",
+      "name": "stats",
+      "actual_module": "orie5260.backtests.daily_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "daily_baseline.py",
+      "name": "build",
+      "actual_module": "orie5260.backtests.daily_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "daily_baseline.py",
+      "name": "main",
+      "actual_module": "orie5260.backtests.daily_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "run_final_strategy.py",
+      "name": "inverse_vol_weight",
+      "actual_module": "orie5260.backtests.final_strategy",
+      "body_preserved": true
+    },
+    {
+      "original": "run_final_strategy.py",
+      "name": "build_monthly_sleeves",
+      "actual_module": "orie5260.backtests.final_strategy",
+      "body_preserved": true
+    },
+    {
+      "original": "run_final_strategy.py",
+      "name": "dated_sleeves",
+      "actual_module": "orie5260.backtests.final_strategy",
+      "body_preserved": true
+    },
+    {
+      "original": "run_final_strategy.py",
+      "name": "build_portfolio_inputs",
+      "actual_module": "orie5260.backtests.final_strategy",
+      "body_preserved": true
+    },
+    {
+      "original": "run_final_strategy.py",
+      "name": "final_target",
+      "actual_module": "orie5260.backtests.final_strategy",
+      "body_preserved": true
+    },
+    {
+      "original": "run_final_strategy.py",
+      "name": "summary",
+      "actual_module": "orie5260.backtests.final_strategy",
+      "body_preserved": true
+    },
+    {
+      "original": "run_final_strategy.py",
+      "name": "main",
+      "actual_module": "orie5260.backtests.final_strategy",
+      "body_preserved": true
+    },
+    {
+      "original": "compare_baseline.py",
+      "name": "drawdown_series",
+      "actual_module": "orie5260.backtests.compare_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "compare_baseline.py",
+      "name": "measures",
+      "actual_module": "orie5260.backtests.compare_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "compare_baseline.py",
+      "name": "main",
+      "actual_module": "orie5260.backtests.compare_baseline",
+      "body_preserved": true
+    },
+    {
+      "original": "decompose_steps.py",
+      "name": "measures",
+      "actual_module": "orie5260.backtests.decompose_steps",
+      "body_preserved": true
+    },
+    {
+      "original": "decompose_steps.py",
+      "name": "main",
+      "actual_module": "orie5260.backtests.decompose_steps",
+      "body_preserved": true
+    },
+    {
+      "original": "exposure_sensitivity.py",
+      "name": "gross_match",
+      "actual_module": "orie5260.backtests.exposure_sensitivity",
+      "body_preserved": true
+    },
+    {
+      "original": "exposure_sensitivity.py",
+      "name": "drawdown",
+      "actual_module": "orie5260.backtests.exposure_sensitivity",
+      "body_preserved": true
+    },
+    {
+      "original": "exposure_sensitivity.py",
+      "name": "main",
+      "actual_module": "orie5260.backtests.exposure_sensitivity",
+      "body_preserved": true
+    },
+    {
+      "original": "factor_ic_analysis.py",
+      "name": "row_ic",
+      "actual_module": "orie5260.factors.ic",
+      "body_preserved": true
+    },
+    {
+      "original": "factor_ic_analysis.py",
+      "name": "within_class_ic",
+      "actual_module": "orie5260.factors.ic",
+      "body_preserved": true
+    },
+    {
+      "original": "factor_ic_analysis.py",
+      "name": "ic_statistics",
+      "actual_module": "orie5260.factors.ic",
+      "body_preserved": true
+    },
+    {
+      "original": "factor_ic_analysis.py",
+      "name": "to_return_date",
+      "actual_module": "orie5260.factors.ic",
+      "body_preserved": true
+    },
+    {
+      "original": "factor_ic_analysis.py",
+      "name": "main",
+      "actual_module": "orie5260.research.factors.factor_ic_analysis",
+      "body_preserved": true
+    },
+    {
+      "original": "backtest_ic_filter.py",
+      "name": "main",
+      "actual_module": "orie5260.research.factors.backtest_ic_filter",
+      "body_preserved": true
+    },
+    {
+      "original": "evaluate_ic_filter_oos.py",
+      "name": "main",
+      "actual_module": "orie5260.research.factors.evaluate_ic_filter_oos",
+      "body_preserved": true
+    },
+    {
+      "original": "backtest_ic_t_filter.py",
+      "name": "main",
+      "actual_module": "orie5260.research.factors.backtest_ic_t_filter",
+      "body_preserved": true
+    },
+    {
+      "original": "optimize_daily_budgets.py",
+      "name": "aligned_return",
+      "actual_module": "orie5260.research.allocation.optimize_daily_budgets",
+      "body_preserved": true
+    },
+    {
+      "original": "optimize_daily_budgets.py",
+      "name": "validation_metrics",
+      "actual_module": "orie5260.research.allocation.optimize_daily_budgets",
+      "body_preserved": true
+    },
+    {
+      "original": "optimize_daily_budgets.py",
+      "name": "main",
+      "actual_module": "orie5260.research.allocation.optimize_daily_budgets",
+      "body_preserved": true
+    },
+    {
+      "original": "optimize_ict42_portfolio.py",
+      "name": "json_safe",
+      "actual_module": "orie5260.research.allocation.optimize_ict42_portfolio",
+      "body_preserved": true
+    },
+    {
+      "original": "optimize_ict42_portfolio.py",
+      "name": "replay",
+      "actual_module": "orie5260.research.allocation.optimize_ict42_portfolio",
+      "body_preserved": true
+    },
+    {
+      "original": "optimize_ict42_portfolio.py",
+      "name": "main",
+      "actual_module": "orie5260.research.allocation.optimize_ict42_portfolio",
+      "body_preserved": true
+    },
+    {
+      "original": "prepare_ppt42_results.py",
+      "name": "main",
+      "actual_module": "orie5260.presentation.prepare_results",
+      "body_preserved": true
+    },
+    {
+      "original": "presentation_factor_model_evidence.py",
+      "name": "render_direction_formula",
+      "actual_module": "orie5260.presentation.model_evidence",
+      "body_preserved": true
+    },
+    {
+      "original": "presentation_factor_model_evidence.py",
+      "name": "main",
+      "actual_module": "orie5260.presentation.model_evidence",
+      "body_preserved": true
+    }
+  ],
+  "notes": "Function/class AST bodies match original snapshots after normalizing import-module paths. Only packaging, imports and shared root resolution changed."
+}

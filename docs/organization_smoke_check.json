@@ -1,0 +1,19 @@
+{
+  "original_comparison_reproduced_in_temporary_directory": true,
+  "numerical_tolerance": 1e-12,
+  "rows": 4,
+  "frozen42_model_loaded": true,
+  "model_features": 42,
+  "existing_outputs_not_overwritten": true,
+  "selected42_daily_replay_unchanged": true,
+  "selected42_daily_observations": 12916,
+  "selected42_max_absolute_differences": {
+    "gross_exposure": 1.2079226507921703e-13,
+    "gross_return": 1.1373280789372942e-16,
+    "net_exposure": 8.526512829121202e-14,
+    "net_return": 3.200564813177209e-16,
+    "roll_cost": 3.7947076036992655e-19,
+    "trade_cost": 9.928581394536007e-17,
+    "turnover": 9.103828801926284e-14
+  }
+}

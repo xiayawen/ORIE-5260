@@ -1,0 +1,97 @@
+[
+  {
+    "page": 1,
+    "part": "ppt/slides/slide1.xml",
+    "title": "A Daily-Signal"
+  },
+  {
+    "page": 2,
+    "part": "ppt/slides/slide2.xml",
+    "title": "Data and evaluation periods"
+  },
+  {
+    "page": 3,
+    "part": "ppt/slides/slide3.xml",
+    "title": "Replicated Baseline"
+  },
+  {
+    "page": 4,
+    "part": "ppt/slides/slide4.xml",
+    "title": "Four signals share one portfolio risk model"
+  },
+  {
+    "page": 5,
+    "part": "ppt/slides/slide5.xml",
+    "title": "Economic trend uses five predefined themes"
+  },
+  {
+    "page": 6,
+    "part": "ppt/slides/slide6.xml",
+    "title": "Our factor library goes beyond momentum"
+  },
+  {
+    "page": 7,
+    "part": "ppt/slides/slide13.xml",
+    "title": "Two roles: ML features and negative skew"
+  },
+  {
+    "page": 8,
+    "part": "ppt/slides/slide17.xml",
+    "title": "Filter on IC strength and directional evidence"
+  },
+  {
+    "page": 9,
+    "part": "ppt/slides/slide14.xml",
+    "title": "From historical returns to the final portfolio"
+  },
+  {
+    "page": 10,
+    "part": "ppt/slides/slide18.xml",
+    "title": "How Extra Trees turns 42 inputs into a probability"
+  },
+  {
+    "page": 11,
+    "part": "ppt/slides/slide15.xml",
+    "title": "Chronological fits keep future labels out"
+  },
+  {
+    "page": 12,
+    "part": "ppt/slides/slide19.xml",
+    "title": "Candidate models: matched validation net PnL"
+  },
+  {
+    "page": 13,
+    "part": "ppt/slides/slide16.xml",
+    "title": "Final specification and selection rationale"
+  },
+  {
+    "page": 14,
+    "part": "ppt/slides/slide7.xml",
+    "title": "Sharpe improves in both periods"
+  },
+  {
+    "page": 15,
+    "part": "ppt/slides/slide8.xml",
+    "title": "Drawdown improves later"
+  },
+  {
+    "page": 16,
+    "part": "ppt/slides/slide9.xml",
+    "title": "The final portfolio carries substantial exposure"
+  },
+  {
+    "page": 17,
+    "part": "ppt/slides/slide10.xml",
+    "title": "Exposure limits and slower execution change the result"
+  },
+  {
+    "page": 18,
+    "part": "ppt/slides/slide11.xml",
+    "title": "Cap removal has different effects across periods"
+  },
+  {
+    "page": 19,
+    "part": "ppt/slides/slide12.xml",
+    "title": "A modest improvement with clear limits"
+  }
+]

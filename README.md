@@ -1,49 +1,88 @@
-# Daily futures trend portfolio: final submission
+# ORIE 5260：代码与实验导航
 
-This repository contains the course time-series momentum baseline and one selected enhancement: a four-sleeve futures portfolio whose **price-trend signal uses daily data**. The project asks whether adding economic, cross-sectional and machine-learning information, combined under a common covariance risk model, improves the baseline's risk-adjusted outcomes. It is the final submission for the enhancement phase of ORIE 5260; the earlier EDA and baseline diagnostics remain in the project's research history.
+代码已按功能模块整理。当前选定的是 **IC＋方向t筛选、固定42输入Extra Trees、固定30/20/20/30预算、21营业日全量调仓**；不采用学习配重或成本感知执行。对应历史IS Sharpe **1.2831**、2015–2025年5月后期Sharpe **0.3567**。
 
-The main comparison covers **58 futures markets** from January 1976 to May 2025. Positions are reconsidered every **21 business days** and returns are marked daily. The macro, negative-skew and Extra Trees sleeves use information available at the latest month-end; no later month-end value is backfilled into an earlier decision.
+原始66输入提交、所有筛选/模型/优化实验、数据和结果均保留。这里仅整理文件及导入，不改变策略规则、训练日期或已有回测产物。`report.md`仍是原66输入提交报告；当前42输入数字和19页演示见`ppt/`及`outputs/ppt42_update/`。
 
-## Start here
+## 常用入口
 
-1. Install the packages in `requirements.txt`.
-2. Run `python daily_baseline.py` to rebuild the course baseline.
-3. Run `python run_final_strategy.py` to rebuild the selected four-sleeve portfolio.
-4. Run `python compare_baseline.py` for the matched 21-day IS/OOS comparison and figure.
-5. Run `python decompose_steps.py` for the construction stages in the report appendix (exposure limits and cost-aware execution).
-6. Run `python exposure_sensitivity.py` for the appendix gross and net exposure-limit check of the capped variant.
-7. Read [the final report](report.md) for methods, results and limitations.
+在项目根目录安装`requirements.txt`中的依赖，然后运行：
 
-All source data needed for these commands are in `data/`. They include the full-sample monthly workbook, the asset map, three FRED series plus the credit-spread series, and the archive of daily back-adjusted futures closes. The baseline also evaluates a 66-market universe as a robustness check; the primary report comparison uses the same 58 markets for both strategies.
+```bash
+python run.py --list
+python run.py selected-42 --dry-run
+python run.py selected-42
+python run.py model-evidence
+python -m unittest discover -s tests -v
+```
 
-## Repository guide
+`selected-42`使用已有冻结42输入预测重建组合主结果、风控对照与图表，输出`outputs/ppt42_update/`；`model-evidence`重建筛选证据及候选模型验证PnL，输出`outputs/ppt_factor_model_evidence/`。这两个命令不编辑PPT文件。
 
-| File or folder | Purpose |
+完整重建研究产物时，依次运行：
+
+```bash
+python run.py factor-ic
+python run.py ic-filter
+python run.py ic-filter-oos
+python run.py ic-t-filter
+python run.py selected-42
+python run.py model-evidence
+```
+
+这些命令会重建各自的结果目录。若只阅读现有结果，无需重新训练。`--dry-run`可先查看模块及必要产物。
+
+原有三个常用命令继续有效，含义保持不变：
+
+```bash
+python daily_baseline.py       # 课程日度baseline
+python run_final_strategy.py   # 原66输入提交，保留作对照
+python compare_baseline.py     # 原66输入与baseline的比较
+```
+
+其他旧脚本名可作为统一入口参数使用，例如：
+
+```bash
+python run.py factor_ic_analysis.py
+python run.py optimize_ict42_portfolio.py
+python -m orie5260 selected-42 --dry-run
+```
+
+## 代码在哪里
+
+```text
+orie5260/
+├── common/          数据读取与日历
+├── factors/         31原始因子、排名输入、IC/HAC统计、训练期筛选
+├── signals/         日度趋势、经济趋势、独立负偏度袖套
+├── models/          Extra Trees预测与按指定特征训练
+├── portfolio/       协方差/波动率、组合约束、模块配重优化
+├── execution/       交易记账、交易成本、成本感知执行
+├── backtests/       原提交baseline/66输入回测及附录对照
+├── research/
+│   ├── factors/     IC、IC+t筛选及后期实验
+│   └── allocation/  模块配重与执行优化实验
+└── presentation/    42输入主结果、因子证据和模型对比图表
+```
+
+| 位置 | 内容 |
 |---|---|
-| `daily_baseline.py` | Minxi-Lin's Lecture 11 daily baseline from commit [`5838b70`](https://github.com/xiayawen/ORIE-5260/commit/5838b706cf5b71a1926424fd4751fec679e9af94), with local data paths and inspectable signal outputs. It constructs the 252-day direction, instrument volatility and portfolio weights directly from daily returns. |
-| `price_trend.py` | 252-day compounded-return direction and 252-day instrument volatility for the price-trend sleeve. |
-| `macro_trend.py` | Five economic themes mapped to futures positions with dated release assumptions. |
-| `negative_skew.py` | Within-asset-class ranking of trailing 12-month negative skewness. |
-| `extra_trees.py` | Exact 66-feature Extra Trees classifier, with chronological pre-2005 and pre-2015 fits and a training audit. |
-| `risk_model.py` | Six-month EWMA monthly volatility for non-price sleeves, the 252-day sample covariance used in the final portfolio, and shared portfolio limits. |
-| `portfolio_engine.py` | Risk scaling to the 10% ex-ante target; the exposure limits and cost-aware path used by the appendix variants. |
-| `costs_and_execution.py` | Actual trading and roll cost convention; daily mark-to-market after formation-close trading; γ=5 execution for the appendix variant. |
-| `data_utils.py` | Source loading, common instrument list and 21-business-day calendar. |
-| `run_final_strategy.py` | Combines the four sleeves at fixed 30%/20%/20%/30% signal budgets, scales the book to 10% ex-ante volatility, fully rebalances, and saves weights, returns and daily statistics. `build_portfolio_inputs()` is shared with the appendix scripts. |
-| `compare_baseline.py` | Aligns both strategies on the same 21-day period endpoints and saves performance, wealth and drawdown comparisons. |
-| `decompose_steps.py` | Appendix A: trend sleeve alone, the selected blend, the blend with the four exposure limits, and with γ=5 cost-aware execution, on the same 21-day endpoints. |
-| `exposure_sensitivity.py` | Appendix B: replays the capped γ=5 variant with gross and net limits removed separately and together, plus a gross-matched control. |
-| `outputs/baseline/` | Baseline signals, volatility estimates, raw and final formation weights, return series, summary and anchor-grid sensitivity. |
-| `outputs/final_strategy/` | Selected strategy's daily returns, weights, model-fitting audit and statistics. |
-| `outputs/comparison/` | Matched-period returns, IS/OOS table, wealth figure and drawdown figure. |
-| `outputs/decomposition/` | Construction-stage table (CSV and Markdown) for Appendix A. |
-| `outputs/exposure_sensitivity/` | Appendix B: exposure-limit performance of the capped variant, target-change frequencies, formation exposures, daily returns and later-period drawdown figure. |
-| `tests/` | Checks formation timing, the 10% ex-ante scaling and the appendix portfolio constraints. |
+| `tests/` | 数学、时序、成本、筛选及模块路径测试 |
+| `reports/research/` | 六份研究报告，包含未采用的实验 |
+| `report.md` | 原66输入提交报告，保留历史口径 |
+| `ppt/ORIE5260 Presentation.pptx` | 当前19页42输入方案演示 |
+| `data/` | 原始价格、月收益、类别映射、宏观数据 |
+| `outputs/` | 所有现有回测、冻结模型、筛选表和图表；位置不变 |
+| `archive/flat_layout_before_modularization/` | 整理前完整源码/测试/报告快照及SHA256清单 |
+| `archive/ppt_authoring_session/` | PPT原作者脚本及历史恢复版本 |
+| `docs/MODULE_MAP.md` | 原文件→新模块、命令、输出与依赖对照 |
 
-The final portfolio is scaled at every formation to **10% ex-ante annual volatility** using a 252-day sample covariance, with **no gross, net or asset-class exposure caps**, and trades fully to its target every 21 business days. The cost convention is **2 basis points per unit traded plus four rolls per year at 2 basis points**. The baseline is built the same way from the price-trend sleeve alone, with an 11% ex-ante target. Without caps, both strategies run high leverage in low-volatility rate futures after 2015 (about 11× gross); the final portfolio's average net long is about 6.7× NAV. The report appendix shows the variant with a 10% volatility ceiling, 4× gross, 1× net and 5% per-class limits, with and without γ=5 cost-aware execution.
+数据路径由`orie5260/paths.py`统一定位，不依赖运行时工作目录。原始数据和输出目录没有移动。
 
-## Evaluation and interpretation
+## 当前方案与未采用实验
 
-The main table compares January 1976–December 2014 with January 2015–May 2025. Within the earlier interval, 2005–2009 was used for development and 2010–2014 for validation. Extra Trees supplies live out-of-training predictions from 2005; its initial pre-2005 years contribute no active ML sleeve and the absent sleeve budget returns to trend. The model is refitted before 2015 using only earlier labels and then frozen.
+- **保留**：训练期IC幅度＋方向HAC t筛选的固定42项名单；2015年前重训模型后冻结；四模块信号预算固定30/20/20/30。
+- **对照保留**：原66输入、仅IC的56输入、2015年前重筛的55/38输入、其它模型、配重优化和成本感知执行。它们没有被删除，也不自动成为主策略。
+- 1976–2014是长期历史统计区间，2005年前ML预算回到趋势；不能把长期IS称作42输入模型全程运行39年的成绩。
+- 2015年后数据曾在研究中反复查看，后期比较不等于新获得的未触碰测试集。
 
-For a quick verification, run `python -m unittest discover -s tests`. The capped γ=5 variant (appendix step 4) was reconciled to the research implementation: all 12,916 common daily net returns matched exactly in the development worktree, and it is reproduced unchanged by `decompose_steps.py` and `exposure_sensitivity.py`. The 58-market baseline statistics also matched the source commit's generated results.
+研究报告索引见[reports/research/README.md](reports/research/README.md)。整理前英文README原文保存在[docs/README_before_modularization.md](docs/README_before_modularization.md)。
