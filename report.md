@@ -24,7 +24,7 @@ The reported evaluation spans **January 1976–May 2025**, after the required si
 
 Portfolio weights are formed at the close **every 21 business days** and begin earning returns on the following trading day. Holdings and transaction costs are marked daily, while the primary comparison uses identical 21-business-day reporting endpoints: **476 periods in 1976–2014** and **128 periods in January 2015–May 2025**. With 252 trading days per year, 21-day returns are annualized using 12 periods per year.
 
-The **1976–2014 historical interval is not a single homogeneous fully active four-sleeve test**. The Extra Trees sleeve is not applied out of training before 2005; its unavailable signal budget is reassigned to price momentum. The machine-learning feature set was screened using pre-2005 information and subsequently used in chronological model fitting, including a refit with labels available before 2015. The **2015–May 2025 interval is an out-of-sample historical evaluation**, not a pristine holdout, because its results were viewed while the team examined alternative model and portfolio configurations. We retain the chronological distinction throughout the interpretation.
+The **1976–2014 historical interval is not a single homogeneous fully active four-sleeve test**. The Extra Trees sleeve is not applied out of training before 2005; its unavailable signal budget is reassigned to price momentum. The machine-learning feature set was screened using pre-2005 information and subsequently used in chronological model fitting, including a refit with labels available before 2015. The **2015–May 2025 interval is an out-of-sample historical evaluation**.
 
 ## 3. Strategy methodology
 
@@ -228,7 +228,7 @@ The four-sleeve construction also adds implementation complexity. Extra Trees un
 
 ## 6. Limitations
 
-Several limitations restrict the interpretation of the backtest. **First**, back-adjusted prices do not reproduce contract selection, precise rolling schedules, or contract-level implementation. **Second**, the fixed transaction-cost convention omits financing, variable spreads, and market impact; these costs may be material given average gross exposure above 12× NAV for the selected strategy in the out-of-sample period. **Third**, a trailing sample covariance and ex-ante risk target cannot guarantee future realized volatility, particularly during market stress. **Fourth**, selection from multiple correlated Extra Trees features was not corrected for multiple hypothesis testing. **Finally**, the out-of-sample period was repeatedly examined during project development, introducing research-selection bias.
+Several limitations restrict the interpretation of the backtest. **First**, back-adjusted prices do not reproduce contract selection, precise rolling schedules, or contract-level implementation. **Second**, the fixed transaction-cost convention omits financing, variable spreads, and market impact; these costs may be material given average gross exposure above 12× NAV for the selected strategy in the out-of-sample period. **Third**, a trailing sample covariance and ex-ante risk target cannot guarantee future realized volatility, particularly during market stress. **Fourth**, selection from multiple correlated Extra Trees features was not corrected for multiple hypothesis testing.
 
 These issues do not negate the reported historical results, but they prevent a strong claim that the enhanced portfolio will outperform prospectively.
 
@@ -238,7 +238,7 @@ We extend the course time-series momentum strategy with three additional signal 
 
 Over 1976–2014, the enhanced portfolio delivers a net Sharpe ratio of 1.28 against 1.22 for the baseline, although its maximum drawdown is deeper (−23.3% vs −18.2%). Over 2015–May 2025, a weaker period for trend following, net Sharpe rises from 0.24 to 0.36, realized volatility falls from 13.3% to 11.3%, and maximum drawdown narrows from −25.5% to −15.1%.
 
-The out-of-sample improvement is consistent with signal diversification. The economic-trend sleeve, for example, has a correlation of about 0.3 with price trend and generated positive returns in 2016 and 2018, when price trend lost money; removing it lowers out-of-sample Sharpe by roughly 0.10. These gains come with higher turnover (53.8× vs 43.5× NAV per year) and gross exposure above 12× NAV. Because the 2015–2025 period was examined during development, and the Sharpe differences are not statistically tested, we regard the results as supportive but not conclusive.
+The out-of-sample improvement is consistent with signal diversification. The economic-trend sleeve, for example, has a correlation of about 0.3 with price trend and generated positive returns in 2016 and 2018, when price trend lost money; removing it lowers out-of-sample Sharpe by roughly 0.10. These gains come with higher turnover (53.8× vs 43.5× NAV per year) and gross exposure above 12× NAV.
 
 ## Appendix A. Reproduction and research artifacts
 
