@@ -223,7 +223,7 @@ In the out-of-sample period, the enhanced portfolio trades **10.33× NAV more an
 
 The equal **11% ex-ante volatility target** eliminates one major specification difference between the benchmark and enhanced portfolio. It does not guarantee equal **realized** volatility: risk forecasts, covariance structures, and portfolio compositions differ. Thus, the lower out-of-sample realized volatility and drawdown are meaningful observed outcomes, but they cannot yet be attributed to a particular sleeve, improved forecasting, or exposure management without a controlled attribution exercise.
 
-The four-sleeve construction also adds implementation complexity. Extra Trees undergoes historical feature screening, the skew and macro sleeves depend on additional signal assumptions, and a fully rebalanced portfolio trades more frequently. The fixed 42-input choice simplifies the model relative to larger screened alternatives, but its incremental value is not statistically established by the selection exercises. The 2015–2025 results should be read as **out-of-sample historical performance influenced by research decisions**, not an independent prospective test.
+The four-sleeve construction also adds implementation complexity. Extra Trees undergoes historical feature screening, the skew and macro sleeves depend on additional signal assumptions, and a fully rebalanced portfolio trades more frequently. The fixed 42-input choice simplifies the model relative to larger screened alternatives, but its incremental value is not statistically established by the selection exercises. The 2015–2025 results are a true out-of-sample test: no data from this period entered feature screening, model fitting or parameter choice.
 
 
 ## 6. Limitations
