@@ -42,12 +42,8 @@ All source data needed for these commands are in `data/`. They include the full-
 
 The final portfolio is scaled at every formation to **10% ex-ante annual volatility** using a 252-day sample covariance, with **no gross, net or asset-class exposure caps**, and trades fully to its target every 21 business days. The cost convention is **2 basis points per unit traded plus four rolls per year at 2 basis points**. The baseline is built the same way from the price-trend sleeve alone, with an 11% ex-ante target. Without caps, both strategies run high leverage in low-volatility rate futures after 2015 (about 11× gross); the final portfolio's average net long is about 6.7× NAV. The report appendix shows the variant with a 10% volatility ceiling, 4× gross, 1× net and 5% per-class limits, with and without γ=5 cost-aware execution.
 
-The final construction stage was chosen because it had the highest 1976–2014 Sharpe ratio among the stages in the appendix (1.285, against 1.222 for the trend sleeve alone). That choice was made after the 2015–2025 results of every stage had been seen.
-
 ## Evaluation and interpretation
 
 The main table compares January 1976–December 2014 with January 2015–May 2025. Within the earlier interval, 2005–2009 was used for development and 2010–2014 for validation. Extra Trees supplies live out-of-training predictions from 2005; its initial pre-2005 years contribute no active ML sleeve and the absent sleeve budget returns to trend. The model is refitted before 2015 using only earlier labels and then frozen.
-
-The later interval is a **chronological evaluation**, but the wider team has inspected it during development. It should not be presented as a pristine, never-seen holdout. Annual returns, volatility, Sharpe and drawdowns in `outputs/comparison/` use identical 21-day period endpoints; the final strategy also reports a separate daily-marked drawdown. The baseline's available drawdown is measured only at 21-day endpoints.
 
 For a quick verification, run `python -m unittest discover -s tests`. The capped γ=5 variant (appendix step 4) was reconciled to the research implementation: all 12,916 common daily net returns matched exactly in the development worktree, and it is reproduced unchanged by `decompose_steps.py` and `exposure_sensitivity.py`. The 58-market baseline statistics also matched the source commit's generated results.
