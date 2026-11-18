@@ -1,10 +1,10 @@
 # ORIE 5260: Final daily futures strategy
 
-This submission compares the course's daily time-series momentum baseline with our **final 42-input, four-sleeve futures strategy** across 58 markets. Both portfolios target **11% annualized ex-ante volatility** and trade on a 21-business-day formation calendar. The four-sleeve strategy assigns signal budgets of 30% to daily price trend, 20% to economic trend, 20% to within-class negative skew, and 30% to a frozen Extra Trees forecast. There are no gross or net exposure caps. The [academic report](report.md) explains the design, evaluation, costs, and limitations.
+This submission compares the course's daily time-series momentum (TSMOM) baseline with a **four-sleeve, 42-input futures portfolio** across 58 markets. Both target **11% annualized ex-ante volatility** and form positions every 21 business days. The final portfolio combines daily price trend (30% signal budget), economic trend (20%), within-class negative skew (20%), and a frozen Extra Trees forecast (30%). It has no gross or net exposure caps. See the [main report](report.md) for the method, results, and limitations.
 
-On matched 21-day endpoints, the final strategy's net Sharpe is **1.283** for 1976–2014 and **0.356** for January 2015–May 2025, compared with **1.222** and **0.243** for the course baseline. The 2015–2025 period was inspected during research and is not a pristine holdout.
+On matched 21-day endpoints, the final portfolio's net Sharpe is **1.283** in 1976–2014 and **0.356** in January 2015–May 2025; the baseline's is **1.222** and **0.243**, respectively. The out-of-sample period was examined during research and is not an untouched holdout.
 
-## Reproduce the comparison
+## Run the submitted backtests
 
 Install [requirements.txt](requirements.txt), then run from the repository root:
 
@@ -13,24 +13,27 @@ python run.py baseline
 python run.py selected42_target11
 ```
 
-The baseline command creates the course return series in `outputs/baseline/`. The final-strategy command uses the frozen, chronologically generated 42-input probabilities in `data/frozen_selected42/` and writes its 11%-target tables, daily returns, and figures to [outputs/final_strategy/](outputs/final_strategy/). The saved probabilities define the evaluated strategy; the fixed input list and final fitted model are included for inspection. Refit results may vary slightly with software versions.
+The baseline command generates the comparison series in `outputs/baseline/`. The second command reads the saved, chronological 42-input probabilities in `data/frozen_selected42/` and regenerates the tables, daily returns, and figures in [outputs/final_strategy/](outputs/final_strategy/). These saved probabilities define the evaluated strategy. The frozen input list and final fitted model are included for inspection; a fresh model refit can differ slightly across software versions.
 
-## Repository map
+## Repository structure
 
 | Path | Purpose |
 |---|---|
-| `data/` | Daily futures prices, monthly returns, asset map, macro series, and frozen 42-input forecast artifacts. |
-| `futures_portfolio/backtests/daily_baseline.py` | Course daily 12-month TSMOM baseline with 11% portfolio risk targeting. |
-| `futures_portfolio/backtests/selected42_inputs.py` | Four-sleeve input construction and causal signal alignment. |
-| `futures_portfolio/backtests/selected42_target11.py` | **Final strategy runner**: combines the fixed 42-input signal, applies 11% portfolio risk targeting, marks daily returns, and compares matched endpoints with the baseline. |
-| `futures_portfolio/signals/` | Daily price trend, economic trend, and negative-skew sleeve definitions. |
-| `futures_portfolio/factors/`, `futures_portfolio/models/training.py` | Feature definitions, pre-2005 IC/HAC selection logic, and chronological Extra Trees fitting. |
-| `futures_portfolio/portfolio/` | Volatility and covariance estimation and risk normalization. |
-| `futures_portfolio/execution/` | Daily marking, 2-basis-point trading costs, and modeled roll costs. |
-| `outputs/baseline/` | Course baseline series required for the final matched comparison. |
-| `outputs/final_strategy/` | Final performance table, aligned and daily returns, Sharpe chart, and in-sample/out-of-sample drawdown charts. |
-| `report.md` | Methods, results, interpretation, and limitations. |
+| [run.py](run.py), `futures_portfolio/cli.py` | Entry point and the two submitted commands. |
+| [data/](data/) | Daily futures prices, monthly returns, market-to-asset-class map, macro series, and `frozen_selected42/` forecast artifacts. |
+| `futures_portfolio/common/` | Data loaders and the 21-business-day formation calendar. |
+| `futures_portfolio/signals/` | Price-trend, economic-trend, and negative-skew signals. |
+| `futures_portfolio/factors/`, `futures_portfolio/models/training.py` | Candidate features, pre-2005 IC/HAC selection rules, and chronological model-fitting code. |
+| `futures_portfolio/portfolio/` | Volatility and covariance estimates and portfolio risk scaling. |
+| `futures_portfolio/execution/` | Daily NAV marking, 2-basis-point trade costs, and modeled roll costs. |
+| `futures_portfolio/backtests/daily_baseline.py` | Course 12-month TSMOM baseline at an 11% ex-ante portfolio target. The root [daily_baseline.py](daily_baseline.py) is a compatibility entry point. |
+| `futures_portfolio/backtests/selected42_inputs.py` | Builds and dates the four sleeve inputs. |
+| `futures_portfolio/backtests/selected42_target11.py`, `selected42_metrics.py` | **Final strategy runner** and matched-period performance measures. |
+| `outputs/baseline/` | The retained course baseline series used in the comparison. |
+| [outputs/final_strategy/](outputs/final_strategy/) | Final performance CSV, aligned and daily returns, Sharpe chart, and in-sample/out-of-sample drawdown charts. Filenames retain `selected42_target11` to identify the specification. |
+| [report.md](report.md), [docs/report_equations/](docs/report_equations/) | Main academic report and its GitHub-compatible equation images and source definitions. |
+| [report (1).md](<report (1).md>) | Separate collaborator-submitted report copy, retained unchanged. |
 
-The 42-input set was selected using pre-2005 directional IC and HAC evidence, then fixed; the model was refitted using information available before 2015. Before the ML sleeve has an out-of-training forecast, its budget returns to price trend. The saved model and selection metadata are in `data/frozen_selected42/`. The strategy and baseline use the same 11% ex-ante target; realized volatility can differ.
+The 42-input set was selected using pre-2005 directional IC and HAC evidence and held fixed for the pre-2015 model refit. Before an out-of-training ML forecast is available, its budget returns to price trend. Historical screening used an earlier 10% research convention; all **submitted portfolio results** use the 11% target.
 
-Only the selected strategy and course baseline are part of this submission. Exploratory turning-point, allocation, exposure-limit, and older presentation experiments are excluded.
+Older experiments, the PPT, and the previous `orie5260/` package are excluded by [.gitignore](.gitignore). They may still appear in an existing local checkout, but are not part of this branch's tracked submission.
