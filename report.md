@@ -238,10 +238,6 @@ The equal **11% ex-ante volatility target** eliminates one major specification d
 
 The four-sleeve construction also adds implementation complexity. Extra Trees undergoes historical feature screening, the skew and macro sleeves depend on additional signal assumptions, and a fully rebalanced portfolio trades more frequently. The fixed 42-input choice simplifies the model relative to larger screened alternatives, but its incremental value is not statistically established by the selection exercises. The 2015–2025 results should be read as **out-of-sample historical performance influenced by research decisions**, not an independent prospective test.
 
-Two analyses would substantially strengthen the evidence if they can be produced using the existing code and stored data:
-
-1. **Fully active-period and sleeve ablations.** Present 2005–2014 alongside the 1976–2014 aggregate and compare price-only, price-plus-one-sleeve, and full four-sleeve portfolios under the same 11% risk and cost assumptions. This would clarify which signal families contribute to the measured gain. **No such attribution results are assumed or reported here.**
-2. **Matched-date risk and statistical uncertainty.** Recompute baseline and enhanced exposures on identical dates, and report confidence intervals for paired net-return differences and, where feasible, Sharpe differences using dependence-aware time-series methods. The current tables alone do not establish statistical significance.
 
 ## 6. Limitations
 
