@@ -61,7 +61,7 @@ where $\widehat\Sigma_t$ is the trailing daily covariance estimate over eligible
 
 ### 3.3 Factor construction, train-only screening and Extra Trees
 
-This section documents the factor and model research shown on **slides 6–12** of [the presentation](ppt/ORIE5260%20Presentation.pptx). The final specification uses **42 inputs**, selected from 66 candidates; the original unfiltered 66-input implementation remains available as a historical comparison.
+The Extra Trees sleeve uses **42 inputs selected from 66 candidates**. The following describes their construction, screening and validation; the original 66-input implementation remains a historical comparison.
 
 #### 3.3.1 Constructing the candidate library
 
@@ -84,7 +84,7 @@ Each raw feature also generates a centered within-class percentile rank:
 
 <img src="docs/report_equations/class_rank.png" alt="Equation: class rank" width="272">
 
-The candidate representation is therefore **31 raw values + 31 class ranks + four class indicators = 66 inputs**. Raw values retain absolute magnitudes; ranks describe relative standing among class peers. They are related representations, not 62 independent alpha discoveries. Missing values are handled by training-only median imputation.
+The candidate representation contains **31 raw values + 31 class ranks + four class indicators = 66 inputs**. Raw values preserve absolute magnitudes, while ranks describe relative standing within an asset class; these are related representations, not independent alpha discoveries.
 
 #### 3.3.2 Screening on IC strength and directional evidence
 
@@ -94,21 +94,21 @@ Screening uses **1976–2004 observations whose next-month return labels are alr
 
 IC observations are dated by **return realization**, so a label beyond the training cutoff cannot enter the screen. The 62 numeric inputs are screened separately, while the four class indicators are retained as controls. Define the training direction and signed IC series as
 
-<img src="docs/report_equations/signed_ic.png" alt="Equation: signed ic" width="302">
+<img src="docs/report_equations/signed_ic.png" alt="Equation: signed ic" width="470">
 
 To allow serial dependence, we use a six-lag Newey–West/Bartlett estimate of the standard error of the signed mean:
 
 <img src="docs/report_equations/hac_autocovariance.png" alt="Equation: hac autocovariance" width="335">
 
-<img src="docs/report_equations/directional_t.png" alt="Equation: directional t" width="307">
+<img src="docs/report_equations/directional_t.png" alt="Equation: directional t" width="504">
 
 The retained set satisfies **both** conditions:
 
 <img src="docs/report_equations/screen_rule.png" alt="Equation: screen rule" width="326">
 
-Equivalently, a positive-IC input needs HAC t ≥ 1.96 and a negative-IC input needs HAC t ≤ −1.96. A negative IC can still carry information; the classifier receives the original feature and learns its relationship to the label. The signed series is a diagnostic, not a manual sign flip applied to model inputs. The nominal two-sided threshold is **not adjusted for testing 62 related candidates**, and choosing direction from the same training sample does not establish independent evidence of stability.
+A positive-IC input must have HAC t ≥ 1.96; a negative-IC input must have HAC t ≤ −1.96. Negative IC can be predictive: signed IC is a diagnostic, and model inputs are not manually sign-flipped. The threshold is **not adjusted for multiple testing**, so passing the training screen does not independently establish stability.
 
-![PPT slide 8: training IC strength and HAC t-statistic screening](outputs/ppt_factor_model_evidence/screen_scatter.png)
+![Training-sample IC strength and HAC t-statistic screening](outputs/ppt_factor_model_evidence/screen_scatter.png)
 
 The screen retains **20 raw factors + 18 within-class ranks + four class indicators = 42 inputs**. The 20 raw factors are:
 
@@ -126,37 +126,23 @@ Raw and ranked versions are tested independently, so retaining a raw factor does
 
 The training direction is fixed before evaluating 2005–2014. **16 of the 20 retained raw factors keep that direction** in validation. The equal-weight average of their signed monthly IC series has training mean 0.0656 and HAC t 6.84; its validation mean falls to **0.0185 with HAC t 1.08** and a 95% interval of approximately **[−0.0152, 0.0522]**.
 
-![PPT slide 8: signed factor IC in training and validation, with HAC uncertainty](outputs/ppt_factor_model_evidence/signed_ic_validation.png)
+![Signed factor IC in training and 2005–2014 validation, with HAC uncertainty](outputs/ppt_factor_model_evidence/signed_ic_validation.png)
 
-This is evidence of partial directional persistence, with considerable uncertainty. The validation interval crosses zero. Averaging factor IC series is neither the IC of the nonlinear Extra Trees forecast nor the return of a tradable equal-weight factor portfolio. It cannot establish that every retained factor contributes incremental portfolio alpha. Screening only changes ML inputs: the **independent 20% negative-skew sleeve in Section 3.2 stays unchanged**, even though `NegativeSkew_12m` is not among the 20 retained raw ML features.
+Direction partly persists, but the validation interval crosses zero. This average of single-factor IC series is neither forecast IC nor a tradable portfolio return and does not establish individual alpha contributions. Screening leaves the **independent 20% negative-skew sleeve** unchanged, although `NegativeSkew_12m` is excluded from the retained raw ML inputs.
 
 #### 3.3.4 From screened features to a next-month forecast
 
 The supervised target is **the sign of next month's return**, not its magnitude:
 
-<img src="docs/report_equations/prediction_target.png" alt="Equation: prediction target" width="231">
+<img src="docs/report_equations/prediction_target.png" alt="Equation: prediction target" width="432">
 
-Missing and exactly zero target returns are excluded from fitting. The panel pools dated instrument observations with their class indicators. Extra Trees combines **200 randomized classification trees**, with maximum depth 6, minimum leaf size 30, `max_features=0.7` and random seed 5260. Candidate feature subsets and randomized cut points create conditional splits, allowing combinations of trend, risk and relative performance to affect the forecast. Median imputation is fitted only on the training rows.
+The model pools instrument-date observations with class indicators and excludes missing or zero target returns. Training-only median imputation precedes **200 randomized classification trees**, with maximum depth 6, minimum leaf size 30, `max_features=0.7` and seed 5260. Random feature subsets and cut points allow nonlinear combinations of trend, risk and relative performance.
 
-For tree b, the terminal leaf estimates the fraction of positive training labels among observations in that leaf. Averaging the tree probabilities gives
+Each tree estimates the positive-label fraction in its terminal leaf. The mean tree probability becomes a continuous direction score:
 
-<img src="docs/report_equations/tree_probability.png" alt="Equation: tree probability" width="168">
+<img src="docs/report_equations/tree_probability.png" alt="Equation: tree probability" width="495">
 
-The continuous score is divided by the instrument's formation-time volatility and normalized to the common predicted risk scale. For example, p = 0.65 gives direction +0.30, p = 0.50 gives zero, and p = 0.35 gives −0.30. **The probability is not an expected return, and the direction score is not a final NAV weight.**
-
-```mermaid
-flowchart LR
-    A[Historical monthly returns] --> B[31 raw factors and class ranks]
-    B --> C[Train-only IC and HAC t screen: 42 inputs]
-    C --> D[Extra Trees: 200 trees]
-    D --> E[Next-month positive-return probability]
-    E --> F[Continuous direction: 2p minus 1]
-    F --> G[Volatility-adjusted ML sleeve]
-    G --> H[Fixed four-sleeve blend]
-    H --> I[11% ex-ante risk; full rebalance every 21 business days]
-```
-
-The blend remains **30% trend + 20% macro + 20% negative skew + 30% ML**. Learned module weights and cost-aware partial execution were investigated separately and are not part of this selected specification.
+The score is divided by instrument volatility and risk-normalized to form the ML sleeve; for example, p = 0.65 gives direction +0.30. **Probability is not expected return, and direction is not a final NAV weight.** The sleeve then enters the fixed **30/20/20/30** blend described in Section 3.2.
 
 #### 3.3.5 Chronological fitting and model comparison
 
@@ -169,11 +155,11 @@ The blend remains **30% trend + 20% macro + 20% negative skew + 30% ML**. Learne
 
 There is no active out-of-training ML sleeve before 2005, so its 30% budget returns to price trend. Chronological fitting controls label leakage, but **the later interval has already been inspected during research and is not an untouched holdout**.
 
-**Risk-target convention.** Slides 6–12 and the saved candidate-model comparison were prepared for the earlier **10%** portfolio-risk specification. The final portfolio results in Sections 4–7 retain the updated **11%** target used by both strategies. The validation table below is reproduced from that original 10% experiment; it is not a new 11% candidate-model comparison.
+The candidate comparison below uses the historical **10% ex-ante portfolio risk target**; Sections 4–7 report the final **11%** specification. These are distinct experiments.
 
-The slide-12 comparison fits all four candidate classifiers before 2005 and freezes them through 2005–2014. Only the 30% ML sleeve changes: inputs, other sleeves, budgets, the original 10% risk target, trading calendar and costs are held fixed. The curves show **net wealth for the complete four-sleeve portfolios**, not standalone classifier returns.
+All four classifiers are fitted before 2005 and frozen through **2005–2014 validation**. Only the classifier changes: the 42 inputs, other sleeves, budgets, risk target, calendar and costs remain fixed. Curves, Sharpe and drawdown describe **complete four-sleeve portfolios**; AUC measures classification predictions.
 
-![PPT slide 12: candidate models, matched 2005–2014 validation net PnL](outputs/ppt_factor_model_evidence/candidate_model_pnl.png)
+![Candidate four-sleeve portfolios: 2005–2014 validation net wealth at a 10% risk target](outputs/ppt_factor_model_evidence/candidate_model_pnl.png)
 
 | Model | Validation portfolio net Sharpe | Maximum endpoint drawdown | Prediction AUC |
 |---|---:|---:|---:|
@@ -182,9 +168,9 @@ The slide-12 comparison fits all four candidate classifiers before 2005 and free
 | Histogram gradient boosting | 1.0019 | −11.27% | 0.5430 |
 | Logistic regression | **1.0353** | −10.94% | 0.5491 |
 
-Extra Trees is retained as the nonlinear specification: it has the highest sample AUC and the smallest validation drawdown among these candidates, with competitive portfolio Sharpe. **Logistic regression has the highest validation Sharpe**, so the evidence does not support calling Extra Trees a universal winner. The differences are small and no significance claim is made. These validation statistics cover neither the full 1976–2014 history nor the 2015-onward interval. [Portfolio metrics](outputs/ppt_factor_model_evidence/validation_model_performance.csv), [classification metrics](outputs/ppt_factor_model_evidence/validation_classification.csv) and [training audits](outputs/ppt_factor_model_evidence/model_training_audit.json) provide the underlying evidence.
+Extra Trees has the highest sample AUC and shallowest validation drawdown, while **Logistic regression has the highest portfolio Sharpe**. The retained nonlinear model therefore offers a trade-off rather than a universal performance advantage; differences are small and no significance claim is made. These validation results do not cover the full historical or later evaluation intervals. Supporting [portfolio metrics](outputs/ppt_factor_model_evidence/validation_model_performance.csv), [classification metrics](outputs/ppt_factor_model_evidence/validation_classification.csv) and [training audits](outputs/ppt_factor_model_evidence/model_training_audit.json) are retained.
 
-The team also examined an IC-only feature filter, IC-plus-HAC filtering, pre-2015 re-screened alternatives, sleeve-budget learning, and cost-aware execution. Those experiments did **not establish a statistically reliable advantage** for a more complex alternative over the selected fixed **42-input, 30/20/20/30, full-rebalance** specification. Historical selection experiments used their own risk-target conventions; the **final results in this report are uniformly evaluated at 11% ex-ante volatility**. The selection process is documented in the [screening report](reports/research/IC_T_FILTER_REPORT.md) and [portfolio-design experiment](reports/research/ICT42_PORTFOLIO_OPTIMIZATION_REPORT.md).
+IC-only filtering, pre-2015 re-screening, learned budgets and partial execution remain separate historical experiments; they did not establish a statistically reliable advantage over the selected specification. See the [screening report](reports/research/IC_T_FILTER_REPORT.md) and [portfolio-design experiment](reports/research/ICT42_PORTFOLIO_OPTIMIZATION_REPORT.md).
 
 ### 3.4 Rebalancing and implementation costs
 
