@@ -1,7 +1,0 @@
-{
-  "selected_raw": 20,
-  "selected_numeric": 38,
-  "total_inputs": 42,
-  "validation_same_direction": 16,
-  "note": "Trainingdirectionfixed; meanof20signedfactorICseries is diagnostic, notICofatradablecombinedportfolio; HAC6 errorbars; noFDRcorrection."
-}

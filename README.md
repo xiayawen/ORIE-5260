@@ -1,56 +1,36 @@
-# ORIE 5260: Daily Futures Trend Portfolio
+# ORIE 5260: Final daily futures strategy
 
-This repository compares a course **daily time-series momentum baseline** with a four-sleeve futures portfolio across 58 markets. The selected portfolio combines price trend (30% signal budget), economic trend (20%), negative skew (20%) and a fixed **42-input Extra Trees** signal (30%). It now targets **11% ex-ante annual volatility**, matching the course baseline, and fully rebalances every 21 business days. It has no gross or net exposure caps and does not use cost-aware execution. The main [academic report](report.md) explains the construction, results and limitations.
+This submission compares the course's daily time-series momentum baseline with our **final 42-input, four-sleeve futures strategy** across 58 markets. Both portfolios target **11% annualized ex-ante volatility** and trade on a 21-business-day formation calendar. The four-sleeve strategy assigns signal budgets of 30% to daily price trend, 20% to economic trend, 20% to within-class negative skew, and 30% to a frozen Extra Trees forecast. There are no gross or net exposure caps. The [academic report](report.md) explains the design, evaluation, costs, and limitations.
 
-On matched 21-day endpoints, selected-portfolio net Sharpe is **1.283** in 1976–2014 and **0.356** in the January 2015–May 2025 out-of-sample period; the course baseline is **1.222** and **0.243**, respectively. The out-of-sample period has been examined during research and is not an untouched holdout.
+On matched 21-day endpoints, the final strategy's net Sharpe is **1.283** for 1976–2014 and **0.356** for January 2015–May 2025, compared with **1.222** and **0.243** for the course baseline. The 2015–2025 period was inspected during research and is not a pristine holdout.
 
-## Start here
+## Reproduce the comparison
 
-Install [`requirements.txt`](requirements.txt) and run commands from the repository root:
-
-```bash
-python run.py --list
-python run.py baseline       # Course daily baseline
-python run.py selected-42    # Selected portfolio, matched comparison and figures
-python -m unittest discover -s tests
-```
-
-`selected-42` reads the saved frozen Extra Trees probabilities in `outputs/ic_t_feature_filter/`. To rebuild that research path first:
+Install [requirements.txt](requirements.txt), then run from the repository root:
 
 ```bash
-python run.py factor-ic
-python run.py ic-filter
-python run.py ic-filter-oos
-python run.py ic-t-filter
-python run.py selected-42
+python run.py baseline
+python run.py selected42_target11
 ```
 
-Use `python run.py <command> --dry-run` to see a command's module and required saved inputs without running it. `python run.py model-evidence` regenerates the factor and model evidence figures. The root scripts `daily_baseline.py`, `run_final_strategy.py` and `compare_baseline.py` remain compatibility entry points; **`run_final_strategy.py` reconstructs the original 66-input portfolio**, not the selected 42-input strategy.
+The baseline command creates the course return series in `outputs/baseline/`. The final-strategy command uses the frozen, chronologically generated 42-input probabilities in `data/frozen_selected42/` and writes its 11%-target tables, daily returns, and figures to [outputs/final_strategy/](outputs/final_strategy/). The saved probabilities define the evaluated strategy; the fixed input list and final fitted model are included for inspection. Refit results may vary slightly with software versions.
 
-## Repository structure
+## Repository map
 
 | Path | Purpose |
 |---|---|
-| `data/` | Monthly returns, daily futures prices, asset mapping and macroeconomic inputs. |
-| `orie5260/common/` | Data loading and the 21-business-day formation calendar. |
-| `orie5260/signals/` | Daily price trend, economic themes and within-class negative-skew sleeves. |
-| `orie5260/factors/` | Candidate factor features, IC/HAC statistics and input selection. |
-| `orie5260/models/` | Extra Trees training and forecast construction. |
-| `orie5260/portfolio/` | Covariance estimation, risk scaling, limits and allocation experiments. |
-| `orie5260/execution/` | Daily return accounting, transaction costs and experimental cost-aware execution. |
-| `orie5260/backtests/` | Course baseline and original 66-input strategy/diagnostics. |
-| `orie5260/research/` | Feature-screening and allocation experiments. |
-| `orie5260/presentation/prepare_results.py` | **Selected 42-input portfolio** and presentation tables/figures; invoked by `python run.py selected-42`. |
-| `run.py`, `orie5260/cli.py` | Command-line entry points for reproducible runs. |
-| `outputs/baseline/` | Course baseline returns and robustness variants. |
-| `outputs/ic_t_feature_filter/` | Frozen 42-input list, models, probabilities and screening comparisons. |
-| `outputs/selected42_target11/` | **Current 11%-target selected-portfolio results**, aligned returns, daily returns and figures. |
-| `reports/research/` | Research reports for candidate signals, screens and portfolio alternatives, including rejected variants. |
-| `ppt/` | Presentation materials from an earlier reporting pass; use this README, report and selected-result folder for current figures. |
-| `tests/` | Timing, accounting, model-selection and module tests. |
-| `archive/` | Original flat-layout source and presentation-authoring snapshots. |
-| `docs/MODULE_MAP.md` | Mapping from old flat script names to the current modules and commands. |
+| `data/` | Daily futures prices, monthly returns, asset map, macro series, and frozen 42-input forecast artifacts. |
+| `futures_portfolio/backtests/daily_baseline.py` | Course daily 12-month TSMOM baseline with 11% portfolio risk targeting. |
+| `futures_portfolio/backtests/selected42_inputs.py` | Four-sleeve input construction and causal signal alignment. |
+| `futures_portfolio/backtests/selected42_target11.py` | **Final strategy runner**: combines the fixed 42-input signal, applies 11% portfolio risk targeting, marks daily returns, and compares matched endpoints with the baseline. |
+| `futures_portfolio/signals/` | Daily price trend, economic trend, and negative-skew sleeve definitions. |
+| `futures_portfolio/factors/`, `futures_portfolio/models/training.py` | Feature definitions, pre-2005 IC/HAC selection logic, and chronological Extra Trees fitting. |
+| `futures_portfolio/portfolio/` | Volatility and covariance estimation and risk normalization. |
+| `futures_portfolio/execution/` | Daily marking, 2-basis-point trading costs, and modeled roll costs. |
+| `outputs/baseline/` | Course baseline series required for the final matched comparison. |
+| `outputs/final_strategy/` | Final performance table, aligned and daily returns, Sharpe chart, and in-sample/out-of-sample drawdown charts. |
+| `report.md` | Methods, results, interpretation, and limitations. |
 
-The current selected strategy uses the **same frozen 42-input list** when Extra Trees is refitted before 2015; before 2005, its unavailable ML budget falls back to price trend. The 42-input screen required training-period absolute mean rank IC ≥ 0.01 and a directionally consistent six-lag HAC |t| ≥ 1.96. The selected portfolio uses 2 basis points per unit traded plus a simple roll allowance. See [report.md](report.md) for methodology and [the research index](reports/research/README.md) for alternative designs.
+The 42-input set was selected using pre-2005 directional IC and HAC evidence, then fixed; the model was refitted using information available before 2015. Before the ML sleeve has an out-of-training forecast, its budget returns to price trend. The saved model and selection metadata are in `data/frozen_selected42/`. The strategy and baseline use the same 11% ex-ante target; realized volatility can differ.
 
-The selected strategy has no turning-point overlay. Research variants are documented separately in [`reports/research/`](reports/research/).
+Only the selected strategy and course baseline are part of this submission. Exploratory turning-point, allocation, exposure-limit, and older presentation experiments are excluded.

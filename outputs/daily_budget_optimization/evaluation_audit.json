@@ -1,8 +1,0 @@
-{
-  "fixed_matches_current_original_marker": true,
-  "optimized_matches_current_original_marker": true,
-  "saved_reference_max_daily_net_difference": 1.307932973951785e-05,
-  "saved_reference_formation_dates_differing_above_1e_minus10": 12,
-  "saved_reference_max_weight_difference": 0.0004088207718417891,
-  "note": "Saved artifacts differ slightly on12 pre2015 formation dates. Comparisons use freshly regenerated fixed control and original marker; cause of historical saved-artifact discrepancy not established."
-}

@@ -24,7 +24,7 @@ The reported evaluation spans **January 1976–May 2025**, after the required si
 
 Portfolio weights are formed at the close **every 21 business days** and begin earning returns on the following trading day. Holdings and transaction costs are marked daily, while the primary comparison uses identical 21-business-day reporting endpoints: **476 periods in 1976–2014** and **128 periods in January 2015–May 2025**. With 252 trading days per year, 21-day returns are annualized using 12 periods per year.
 
-The **1976–2014 historical interval is not a single homogeneous fully active four-sleeve test**. The Extra Trees sleeve is not applied out of training before 2005; its unavailable signal budget is reassigned to price momentum. The machine-learning feature set was screened using pre-2005 information and subsequently used in chronological model fitting, including a refit with labels available before 2015. The **2015–May 2025 interval is an out-of-sample historical evaluation**.
+The **1976–2014 historical interval is not a single homogeneous fully active four-sleeve test**. The Extra Trees sleeve is not applied out of training before 2005; its unavailable signal budget is reassigned to price momentum. The machine-learning feature set was screened using pre-2005 information and subsequently used in chronological model fitting, including a refit with labels available before 2015. The **2015–May 2025 interval is an out-of-sample historical evaluation**. Its results were inspected during project research, so it is not an untouched prospective holdout.
 
 ## 3. Strategy methodology
 
@@ -64,7 +64,7 @@ The Extra Trees sleeve uses **42 inputs selected from 66 candidates**. The follo
 
 #### 3.3.1 Constructing the candidate library
 
-All features are computed from monthly returns available at the formation date. The library contains **31 raw factors: 25 price-path measures and six same-asset-class peer/residual measures**. The names below match [the feature implementation](orie5260/factors/features.py).
+All features are computed from monthly returns available at the formation date. The library contains **31 raw factors: 25 price-path measures and six same-asset-class peer/residual measures**. The names below match [the feature implementation](futures_portfolio/factors/features.py).
 
 | Family | Count | Candidate raw factors |
 |---|---:|---|
@@ -107,8 +107,6 @@ The retained set satisfies **both** conditions:
 
 A positive-IC input must have HAC t ≥ 1.96; a negative-IC input must have HAC t ≤ −1.96. Negative IC can be predictive: signed IC is a diagnostic, and model inputs are not manually sign-flipped. The threshold is **not adjusted for multiple testing**, so passing the training screen does not independently establish stability.
 
-![Training-sample IC strength and HAC t-statistic screening](outputs/ppt_factor_model_evidence/screen_scatter.png)
-
 The screen retains **20 raw factors + 18 within-class ranks + four class indicators = 42 inputs**. The 20 raw factors are:
 
 | Retained family | Raw factors |
@@ -119,57 +117,30 @@ The screen retains **20 raw factors + 18 within-class ranks + four class indicat
 | Tail shape | `MildWorstReturn_12m`, `LowTailLoss_12m`, `RiskAsymmetry_12m` |
 | Peer and residual | `LowPeerBeta_36m`, `LowResidualVol_12m`, `ResidualMomentum_12m`, `PeerRelativeReversal_1m`, `PeerRelativeMomentum_12m` |
 
-Raw and ranked versions are tested independently, so retaining a raw factor does not automatically retain its rank. The complete 42-name list and chronological fitting audits are in [frozen_selection.json](outputs/ic_t_feature_filter/frozen_selection.json); the raw-factor statistics are in [selected20_factor_evidence.csv](outputs/ppt_factor_model_evidence/selected20_factor_evidence.csv). The final model **keeps this pre-2005 list**, rather than adopting the separately studied pre-2015 re-screened list.
+Raw and ranked versions are tested independently, so retaining a raw factor does not automatically retain its rank. The complete 42-name list and chronological fitting audits are in [frozen_selection.json](data/frozen_selected42/frozen_selection.json). The final model keeps the **pre-2005 selected list** fixed through the pre-2015 refit.
 
-#### 3.3.3 What persists in validation?
 
-The training direction is fixed before evaluating 2005–2014. **16 of the 20 retained raw factors keep that direction** in validation. The equal-weight average of their signed monthly IC series has training mean 0.0656 and HAC t 6.84; its validation mean falls to **0.0185 with HAC t 1.08** and a 95% interval of approximately **[−0.0152, 0.0522]**.
 
-![Signed factor IC in training and 2005–2014 validation, with HAC uncertainty](outputs/ppt_factor_model_evidence/signed_ic_validation.png)
-
-Direction partly persists, but the validation interval crosses zero. This average of single-factor IC series is neither forecast IC nor a tradable portfolio return and does not establish individual alpha contributions. Screening leaves the **independent 20% negative-skew sleeve** unchanged, although `NegativeSkew_12m` is excluded from the retained raw ML inputs.
-
-#### 3.3.4 From screened features to a next-month forecast
+#### 3.3.3 Chronological Extra Trees forecasts
 
 The supervised target is **the sign of next month's return**, not its magnitude:
 
 <img src="docs/report_equations/prediction_target.png" alt="Equation: prediction target" width="432">
 
-The model pools instrument-date observations with class indicators and excludes missing or zero target returns. Training-only median imputation precedes **200 randomized classification trees**, with maximum depth 6, minimum leaf size 30, `max_features=0.7` and seed 5260. Random feature subsets and cut points allow nonlinear combinations of trend, risk and relative performance.
-
-Each tree estimates the positive-label fraction in its terminal leaf. The mean tree probability becomes a continuous direction score:
+The model pools instrument-date observations with class indicators. Training-only median imputation precedes **200 randomized classification trees**, with maximum depth 6, minimum leaf size 30, `max_features=0.7` and seed 5260. The mean tree probability becomes a continuous directional score:
 
 <img src="docs/report_equations/tree_probability.png" alt="Equation: tree probability" width="495">
 
-The score is divided by instrument volatility and risk-normalized to form the ML sleeve; for example, p = 0.65 gives direction +0.30. **Probability is not expected return, and direction is not a final NAV weight.** The sleeve then enters the fixed **30/20/20/30** blend described in Section 3.2.
-
-#### 3.3.5 Chronological fitting and model comparison
+The score is divided by instrument volatility and risk-normalized to form the ML sleeve. For example, a predicted probability of 0.65 gives a directional score of +0.30; it is **not** a predicted return or a final NAV weight.
 
 | Stage | Information and action |
 |---|---|
-| Before 2005 | Screen features on realized 1976–2004 IC; train the initial 42-input model using only labels known before the first formation on 31 December 2004. The last training label is 30 November 2004. |
-| 2005–2014 validation | Freeze the input list, fitted imputer and initial classifier. Evaluate forecasts without fitting on validation labels. |
-| Before 2015 | Keep the same 42 inputs and refit once using labels known before the 31 December 2014 formation. The last training label is 28 November 2014. |
-| January 2015–May 2025 | Freeze the refitted model and input list; later realized returns do not enter screening or fitting. |
+| Before 2005 | Select the 42 inputs using pre-2005 IC/HAC evidence; fit the initial model using only known labels. The last training label is 30 November 2004. |
+| 2005–2014 | Use the initial fit and fixed input list without refitting during this evaluation block. |
+| Before 2015 | Refit once using the same 42 inputs and labels available before the 31 December 2014 formation. The last training label is 28 November 2014. |
+| January 2015–May 2025 | Freeze the refitted model and input list; later returns do not enter model fitting. |
 
-There is no active out-of-training ML sleeve before 2005, so its 30% budget returns to price trend. Chronological fitting controls label leakage: the model and its 42 inputs are fixed using pre-2015 data only.
-
-The candidate comparison below uses the historical **10% ex-ante portfolio risk target**; Sections 4–7 report the final **11%** specification. These are distinct experiments.
-
-All four classifiers are fitted before 2005 and frozen through **2005–2014 validation**. Only the classifier changes: the 42 inputs, other sleeves, budgets, risk target, calendar and costs remain fixed. Curves, Sharpe and drawdown describe **complete four-sleeve portfolios**; AUC measures classification predictions.
-
-![Candidate four-sleeve portfolios: 2005–2014 validation net wealth at a 10% risk target](outputs/ppt_factor_model_evidence/candidate_model_pnl.png)
-
-| Model | Validation portfolio net Sharpe | Maximum endpoint drawdown | Prediction AUC |
-|---|---:|---:|---:|
-| Extra Trees | 1.0112 | −10.24% | 0.5500 |
-| Random Forest | 0.9728 | −11.05% | 0.5435 |
-| Histogram gradient boosting | 1.0019 | −11.27% | 0.5430 |
-| Logistic regression | **1.0353** | −10.94% | 0.5491 |
-
-Extra Trees has the highest sample AUC and shallowest validation drawdown, while **Logistic regression has the highest portfolio Sharpe**. The retained nonlinear model therefore offers a trade-off rather than a universal performance advantage; differences are small and no significance claim is made. These validation results do not cover the full historical or later evaluation intervals. Supporting [portfolio metrics](outputs/ppt_factor_model_evidence/validation_model_performance.csv), [classification metrics](outputs/ppt_factor_model_evidence/validation_classification.csv) and [training audits](outputs/ppt_factor_model_evidence/model_training_audit.json) are retained.
-
-IC-only filtering, pre-2015 re-screening, learned budgets and partial execution remain separate historical experiments; they did not establish a statistically reliable advantage over the selected specification. See the [screening report](reports/research/IC_T_FILTER_REPORT.md) and [portfolio-design experiment](reports/research/ICT42_PORTFOLIO_OPTIMIZATION_REPORT.md).
+Before 2005 there is no out-of-training ML forecast, so its 30% budget returns to price trend. The feature-screening experiment used an earlier **10% portfolio risk convention**, while the selected portfolio is evaluated here at **11% ex-ante volatility**. No features were reselected after changing the target. The out-of-sample interval had been inspected during broader project research, so it is not a pristine holdout.
 
 ### 3.4 Rebalancing and implementation costs
 
@@ -190,15 +161,15 @@ Annual net mean return is $12$ times the mean 21-business-day return; annualized
 | **2015–May 2025** | Course TSMOM baseline | 3.24% | 2.39% | 13.34% | 0.243 | −25.48% |
 | **2015–May 2025** | Enhanced four-sleeve | **4.02%** | **3.44%** | **11.27%** | **0.356** | **−15.12%** |
 
-![Net Sharpe comparison on matched 21-day endpoints](outputs/selected42_target11/image2.png)
+![Net Sharpe comparison on matched 21-day endpoints](outputs/final_strategy/selected42_target11_sharpe.png)
 
 In **1976–2014**, the enhanced strategy achieves a **0.061 higher net Sharpe** with similar annual net mean return and slightly lower realized volatility. Nevertheless, its maximum endpoint drawdown is **5.07 percentage points deeper** than the baseline's. This period therefore does **not** support a uniform claim of superior downside protection. Moreover, its aggregate performance includes the years before the Extra Trees sleeve was active; a separate **2005–2014** comparison would be needed to isolate the fully active allocation.
 
 In **2015–May 2025**, the enhanced strategy earns **0.78 percentage points more annual net mean return**, shows **2.07 percentage points less realized volatility**, and records a **0.113 higher net Sharpe**. Its endpoint maximum drawdown improves by **10.36 percentage points**. These are economically relevant descriptive differences, but the enhanced strategy's Sharpe remains modest in absolute terms.
 
-![Historical drawdown measured at matched reporting endpoints](outputs/selected42_target11/image3.png)
+![Historical drawdown measured at matched reporting endpoints](outputs/final_strategy/selected42_target11_drawdown_is.png)
 
-![2015–May 2025 drawdown measured at matched reporting endpoints](outputs/selected42_target11/image1.png)
+![2015–May 2025 drawdown measured at matched reporting endpoints](outputs/final_strategy/selected42_target11_drawdown_oos.png)
 
 Daily marking of the enhanced strategy produces maximum drawdowns of **−25.19%** in 1976–2014 and **−19.17%** in 2015–May 2025. The corresponding daily baseline drawdowns are not available in the saved comparison, so these figures should **not** be compared directly with the endpoint baseline drawdowns in Table 1. No formal confidence intervals for Sharpe differences are supplied in the current report; the observed improvements should not be characterized as statistically established.
 
@@ -240,31 +211,15 @@ Over 1976–2014, the enhanced portfolio delivers a net Sharpe ratio of 1.28 aga
 
 The out-of-sample improvement is consistent with signal diversification. The economic-trend sleeve, for example, has a correlation of about 0.3 with price trend and generated positive returns in 2016 and 2018, when price trend lost money; removing it lowers out-of-sample Sharpe by roughly 0.10. These gains come with higher turnover (53.8× vs 43.5× NAV per year) and gross exposure above 12× NAV.
 
-## Appendix A. Reproduction and research artifacts
+## Appendix A. Reproduction
 
 From the repository root, install [`requirements.txt`](requirements.txt), then run:
 
 ```bash
 python run.py baseline
-python run.py selected-42
+python run.py selected42_target11
 ```
 
-The selected 11%-target tables, aligned returns, daily results, and figures are saved under [`outputs/selected42_target11/`](outputs/selected42_target11/). The enhanced simulation uses saved chronological 42-input forecasts from [`outputs/ic_t_feature_filter/`](outputs/ic_t_feature_filter/).
+The first command generates the course baseline comparison series. The second uses the frozen chronological 42-input forecasts in [`data/frozen_selected42/`](data/frozen_selected42/) and regenerates the final performance table, aligned and daily returns, and figures in [`outputs/final_strategy/`](outputs/final_strategy/). The selected strategy is implemented in [`futures_portfolio/backtests/selected42_target11.py`](futures_portfolio/backtests/selected42_target11.py), with common signal construction in [`selected42_inputs.py`](futures_portfolio/backtests/selected42_inputs.py).
 
-To regenerate the screening and frozen model forecasts first, run:
-
-```bash
-python run.py factor-ic
-python run.py ic-filter
-python run.py ic-filter-oos
-python run.py ic-t-filter
-python run.py selected-42
-```
-
-The final selected portfolio is constructed in [`orie5260/presentation/prepare_results.py`](orie5260/presentation/prepare_results.py). The command `python run_final_strategy.py` reconstructs the **original 66-input comparison**, not the selected 42-input portfolio.
-
-The factor-screening and candidate-model figures reused from PPT slides 8 and 12 can be regenerated with `python run.py model-evidence`. Their original 10% candidate-model convention is described in Section 3.3.5; this command does not change the selected 11% strategy or edit the PPT.
-
-Further methodological detail is available in the [screening report](reports/research/IC_T_FILTER_REPORT.md) and [portfolio-design experiment](reports/research/ICT42_PORTFOLIO_OPTIMIZATION_REPORT.md).
-
-Display equations are embedded as static images for GitHub compatibility. Editable [equation sources](docs/report_equations/equations.json) and the [rendering script](docs/report_equations/render.py) are retained.
+Display equations are embedded as static images for GitHub compatibility. Their [source definitions](docs/report_equations/equations.json) and [rendering script](docs/report_equations/render.py) are retained.
