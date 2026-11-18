@@ -1,0 +1,42 @@
+[
+  {
+    "name": "sleeve_blend",
+    "latex": "\\widetilde w_t=\\sum_{s\\in\\{P,E,S,ML\\}} b_{s,t}\\bar w_t^{(s)},\n\\qquad \\sum_s b_{s,t}=1."
+  },
+  {
+    "name": "risk_scaling",
+    "latex": "w_t=\\widetilde w_t\\frac{0.11}{\\sqrt{252\\,\\widetilde w_t^{\\mathsf{T}}\\widehat\\Sigma_t\\widetilde w_t}},"
+  },
+  {
+    "name": "class_rank",
+    "latex": "z_{i,t}^{(k)}=\\mathrm{PctRank}_{j\\in\\mathcal{C}(i)}\\left(x_{j,t}^{(k)}\\right)-\\frac{1}{2}."
+  },
+  {
+    "name": "rank_ic",
+    "latex": "IC_{k,t}=\\mathrm{Corr}_{i}\\left(\\mathrm{rank}(x_{i,t}^{(k)}),\\mathrm{rank}(r_{i,t+1})\\right)."
+  },
+  {
+    "name": "signed_ic",
+    "latex": "\\bar{IC}_k=\\frac{1}{T}\\sum_{t=1}^{T}IC_{k,t},\\qquad\n d_k=\\mathrm{sign}(\\bar{IC}_k),\\qquad u_{k,t}=d_k IC_{k,t}."
+  },
+  {
+    "name": "hac_autocovariance",
+    "latex": "\\widehat\\gamma_{k,\\ell}=\\frac{1}{T}\\sum_{t=\\ell+1}^{T}(u_{k,t}-\\bar{u}_k)(u_{k,t-\\ell}-\\bar{u}_k),"
+  },
+  {
+    "name": "directional_t",
+    "latex": "\\widehat{SE}_{HAC6}(\\bar{u}_k)=\\sqrt{\\frac{\\widehat\\gamma_{k,0}+2\\sum_{\\ell=1}^{6}(1-\\ell/7)\\widehat\\gamma_{k,\\ell}}{T}},\\qquad\n t_k^{\\mathrm{direction}}=\\frac{\\bar{u}_k}{\\widehat{SE}_{HAC6}(\\bar{u}_k)}."
+  },
+  {
+    "name": "screen_rule",
+    "latex": "|\\bar{IC}_k|\\geq0.01\\quad\\text{and}\\quad t_k^{\\mathrm{direction}}\\geq1.96."
+  },
+  {
+    "name": "prediction_target",
+    "latex": "y_{i,t+1}=\\mathbf{1}_{\\{r_{i,t+1}>0\\}},\\qquad\np_{i,t}=\\widehat{P}(y_{i,t+1}=1\\mid X_{i,t})."
+  },
+  {
+    "name": "tree_probability",
+    "latex": "p_{i,t}^{(b)}=\\frac{N_{+,\\mathrm{leaf}(i,t,b)}}{N_{\\mathrm{leaf}(i,t,b)}},\\qquad\np_{i,t}=\\frac{1}{200}\\sum_{b=1}^{200}p_{i,t}^{(b)},\\qquad\ns_{i,t}=2p_{i,t}-1."
+  }
+]

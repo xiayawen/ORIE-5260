@@ -47,16 +47,11 @@ Each available sleeve is normalized to a common predicted-risk scale. **If a non
 
 Let $\bar w_t^{(s)}$ denote the risk-normalized proposed weights for sleeve $s$, after reallocating unavailable budgets to price trend. The combined signal portfolio is
 
-$$
-\widetilde w_t=\sum_{s\in\{P,E,S,ML\}} b_{s,t}\bar w_t^{(s)},
-\qquad \sum_s b_{s,t}=1.
-$$
+![Equation: sleeve blend](docs/report_equations/sleeve_blend.png)
 
 The available-sleeve budgets $b_{s,t}$ correspond to the nominal allocations above except when reallocation is required. The portfolio is then scaled to the **same 11% ex-ante risk target as the benchmark**:
 
-$$
- w_t=\widetilde w_t\frac{0.11}{\sqrt{252\,\widetilde w_t^{\mathsf T}\widehat\Sigma_t\widetilde w_t}},
-$$
+![Equation: risk scaling](docs/report_equations/risk_scaling.png)
 
 where $\widehat\Sigma_t$ is the trailing daily covariance estimate over eligible markets. The implementation repairs negative covariance eigenvalues arising from incomplete observations. No notional-exposure caps are imposed.
 
@@ -83,9 +78,7 @@ For peer features, the reference return is the equal-weight return of **other ma
 
 Each raw feature also generates a centered within-class percentile rank:
 
-$$
-z_{i,t}^{(k)}=\operatorname{PctRank}_{j\in\mathcal C(i)}\left(x_{j,t}^{(k)}\right)-\frac12.
-$$
+![Equation: class rank](docs/report_equations/class_rank.png)
 
 The candidate representation is therefore **31 raw values + 31 class ranks + four class indicators = 66 inputs**. Raw values retain absolute magnitudes; ranks describe relative standing among class peers. They are related representations, not 62 independent alpha discoveries. Missing values are handled by training-only median imputation.
 
@@ -93,33 +86,21 @@ The candidate representation is therefore **31 raw values + 31 class ranks + fou
 
 Screening uses **1976–2004 observations whose next-month return labels are already known before the first December 2004 formation**. It never uses 2015-onward returns. For each numeric input k, monthly Rank IC is the cross-sectional Spearman correlation between its formation-time score and the next monthly return, requiring at least ten valid score/return pairs:
 
-$$
-IC_{k,t}=\operatorname{Corr}_{i}\left(\operatorname{rank}(x_{i,t}^{(k)}),\operatorname{rank}(r_{i,t+1})\right).
-$$
+![Equation: rank ic](docs/report_equations/rank_ic.png)
 
 IC observations are dated by **return realization**, so a label beyond the training cutoff cannot enter the screen. The 62 numeric inputs are screened separately, while the four class indicators are retained as controls. Define the training direction and signed IC series as
 
-$$
-\bar{IC}_k=\frac1T\sum_{t=1}^{T}IC_{k,t},\qquad
- d_k=\operatorname{sign}(\bar{IC}_k),\qquad u_{k,t}=d_k IC_{k,t}.
-$$
+![Equation: signed ic](docs/report_equations/signed_ic.png)
 
 To allow serial dependence, we use a six-lag Newey–West/Bartlett estimate of the standard error of the signed mean:
 
-$$
-\widehat\gamma_{k,\ell}=\frac1T\sum_{t=\ell+1}^{T}(u_{k,t}-\bar u_k)(u_{k,t-\ell}-\bar u_k),
-$$
+![Equation: hac autocovariance](docs/report_equations/hac_autocovariance.png)
 
-$$
-\widehat{SE}_{HAC6}(\bar u_k)=\sqrt{\frac{\widehat\gamma_{k,0}+2\sum_{\ell=1}^{6}(1-\ell/7)\widehat\gamma_{k,\ell}}{T}},\qquad
- t_k^{\mathrm{direction}}=\frac{\bar u_k}{\widehat{SE}_{HAC6}(\bar u_k)}.
-$$
+![Equation: directional t](docs/report_equations/directional_t.png)
 
 The retained set satisfies **both** conditions:
 
-$$
-|\bar{IC}_k|\ge0.01\quad\text{and}\quad t_k^{\mathrm{direction}}\ge1.96.
-$$
+![Equation: screen rule](docs/report_equations/screen_rule.png)
 
 Equivalently, a positive-IC input needs HAC t ≥ 1.96 and a negative-IC input needs HAC t ≤ −1.96. A negative IC can still carry information; the classifier receives the original feature and learns its relationship to the label. The signed series is a diagnostic, not a manual sign flip applied to model inputs. The nominal two-sided threshold is **not adjusted for testing 62 related candidates**, and choosing direction from the same training sample does not establish independent evidence of stability.
 
@@ -149,20 +130,13 @@ This is evidence of partial directional persistence, with considerable uncertain
 
 The supervised target is **the sign of next month's return**, not its magnitude:
 
-$$
-y_{i,t+1}=\mathbf 1\{r_{i,t+1}>0\},\qquad
-p_{i,t}=\widehat P(y_{i,t+1}=1\mid X_{i,t}).
-$$
+![Equation: prediction target](docs/report_equations/prediction_target.png)
 
 Missing and exactly zero target returns are excluded from fitting. The panel pools dated instrument observations with their class indicators. Extra Trees combines **200 randomized classification trees**, with maximum depth 6, minimum leaf size 30, `max_features=0.7` and random seed 5260. Candidate feature subsets and randomized cut points create conditional splits, allowing combinations of trend, risk and relative performance to affect the forecast. Median imputation is fitted only on the training rows.
 
 For tree b, the terminal leaf estimates the fraction of positive training labels among observations in that leaf. Averaging the tree probabilities gives
 
-$$
-p_{i,t}^{(b)}=\frac{N_{+,\operatorname{leaf}(i,t,b)}}{N_{\operatorname{leaf}(i,t,b)}},\qquad
-p_{i,t}=\frac1{200}\sum_{b=1}^{200}p_{i,t}^{(b)},\qquad
-s_{i,t}=2p_{i,t}-1.
-$$
+![Equation: tree probability](docs/report_equations/tree_probability.png)
 
 The continuous score is divided by the instrument's formation-time volatility and normalized to the common predicted risk scale. For example, p = 0.65 gives direction +0.30, p = 0.50 gives zero, and p = 0.35 gives −0.30. **The probability is not an expected return, and the direction score is not a final NAV weight.**
 
@@ -305,3 +279,5 @@ The final selected portfolio is constructed in [`orie5260/presentation/prepare_r
 The factor-screening and candidate-model figures reused from PPT slides 8 and 12 can be regenerated with `python run.py model-evidence`. Their original 10% candidate-model convention is described in Section 3.3.5; this command does not change the selected 11% strategy or edit the PPT.
 
 Further methodological detail is available in the [screening report](reports/research/IC_T_FILTER_REPORT.md) and [portfolio-design experiment](reports/research/ICT42_PORTFOLIO_OPTIMIZATION_REPORT.md).
+
+Display equations are embedded as static images for GitHub compatibility. Editable [equation sources](docs/report_equations/equations.json) and the [rendering script](docs/report_equations/render.py) are retained.
