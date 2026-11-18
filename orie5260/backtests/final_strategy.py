@@ -27,7 +27,7 @@ from orie5260.portfolio.risk_model import LIMITS, monthly_ewma_vol, monthly_cova
 
 OUT = ROOT / "outputs" / "final_strategy"
 BUDGETS = np.array([.3, .2, .2, .3])
-TARGET_VOLATILITY = LIMITS.volatility  # 10% ex-ante; used as a scaling target, not a ceiling
+TARGET_VOLATILITY = LIMITS.volatility  # 11% ex-ante; used as a scaling target, not a ceiling
 EVALUATION = {"IS_1976_2014": ("1976-01-01", "2014-12-31"),
               "development_2005_2009": ("2005-01-01", "2009-12-31"),
               "validation_2010_2014": ("2010-01-01", "2014-12-31"),
@@ -96,7 +96,7 @@ def build_portfolio_inputs():
 
 
 def final_target(inputs):
-    """Selected portfolio: 30/20/20/30 blend scaled to 10% ex-ante volatility, no caps."""
+    """Selected portfolio: 30/20/20/30 blend scaled to 11% ex-ante volatility, no caps."""
     blend = np.einsum("tki,k->ti", inputs["basis"], BUDGETS)
     return risk_normalize(blend, inputs["covariance"], TARGET_VOLATILITY)
 
