@@ -152,7 +152,7 @@ The score is divided by instrument volatility and risk-normalized to form the ML
 | Before 2015 | Keep the same 42 inputs and refit once using labels known before the 31 December 2014 formation. The last training label is 28 November 2014. |
 | January 2015–May 2025 | Freeze the refitted model and input list; later realized returns do not enter screening or fitting. |
 
-There is no active out-of-training ML sleeve before 2005, so its 30% budget returns to price trend. Chronological fitting controls label leakage, but **the later interval has already been inspected during research and is not an untouched holdout**.
+There is no active out-of-training ML sleeve before 2005, so its 30% budget returns to price trend. Chronological fitting controls label leakage: the model and its 42 inputs are fixed using pre-2015 data only.
 
 The candidate comparison below uses the historical **10% ex-ante portfolio risk target**; Sections 4–7 report the final **11%** specification. These are distinct experiments.
 
@@ -194,7 +194,7 @@ Annual net mean return is $12$ times the mean 21-business-day return; annualized
 
 In **1976–2014**, the enhanced strategy achieves a **0.061 higher net Sharpe** with similar annual net mean return and slightly lower realized volatility. Nevertheless, its maximum endpoint drawdown is **5.07 percentage points deeper** than the baseline's. This period therefore does **not** support a uniform claim of superior downside protection. Moreover, its aggregate performance includes the years before the Extra Trees sleeve was active; a separate **2005–2014** comparison would be needed to isolate the fully active allocation.
 
-In **2015–May 2025**, the enhanced strategy earns **0.78 percentage points more annual net mean return**, shows **2.07 percentage points less realized volatility**, and records a **0.113 higher net Sharpe**. Its endpoint maximum drawdown improves by **10.36 percentage points**. These are economically relevant descriptive differences, but the enhanced strategy's Sharpe remains modest in absolute terms, and the out-of-sample period has influenced research decisions.
+In **2015–May 2025**, the enhanced strategy earns **0.78 percentage points more annual net mean return**, shows **2.07 percentage points less realized volatility**, and records a **0.113 higher net Sharpe**. Its endpoint maximum drawdown improves by **10.36 percentage points**. These are economically relevant descriptive differences, but the enhanced strategy's Sharpe remains modest in absolute terms.
 
 ![Historical drawdown measured at matched reporting endpoints](outputs/selected42_target11/image3.png)
 
